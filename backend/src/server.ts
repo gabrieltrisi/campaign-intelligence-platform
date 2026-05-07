@@ -126,12 +126,30 @@ app.use(errorMiddleware);
 */
 const PORT = process.env.PORT || 3333;
 
-app.listen(PORT, () => {
-  console.log(`
+/*
+|--------------------------------------------------------------------------
+| EXPORT APP
+|--------------------------------------------------------------------------
+| Necessário para testes automatizados com Vitest/Supertest
+|--------------------------------------------------------------------------
+*/
+export { app };
+
+/*
+|--------------------------------------------------------------------------
+| START SERVER
+|--------------------------------------------------------------------------
+| Evita iniciar servidor durante testes automatizados
+|--------------------------------------------------------------------------
+*/
+if (process.env.NODE_ENV !== 'test') {
+  app.listen(PORT, () => {
+    console.log(`
 ========================================
 🚀 Server running successfully
 📍 Port: ${PORT}
 🌐 Environment: ${process.env.NODE_ENV || 'development'}
 ========================================
-  `);
-});
+    `);
+  });
+}
