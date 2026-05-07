@@ -111,6 +111,8 @@ Este projeto foi desenvolvido como desafio técnico backend, com objetivo de dem
 - bcrypt
 - Zod
 - Express Rate Limit
+- Vitest
+- Supertest
 
 ### Frontend
 
@@ -120,6 +122,12 @@ Este projeto foi desenvolvido como desafio técnico backend, com objetivo de dem
 - Recharts
 - React Hot Toast
 - CSS3
+
+### DevOps
+
+- GitHub Actions
+- Render
+- Vercel
 
 ---
 
@@ -162,6 +170,27 @@ Este projeto foi desenvolvido como desafio técnico backend, com objetivo de dem
 - Logger de requisições
 - Health check
 - Estrutura escalável
+
+---
+
+## Qualidade e Integração Contínua
+
+O projeto possui uma estrutura preparada para garantir qualidade, estabilidade e integração contínua durante o desenvolvimento.
+
+### Ferramentas utilizadas
+
+- Vitest
+- Supertest
+- GitHub Actions
+- Pipeline CI/CD
+
+### Objetivos da pipeline
+
+- Executar testes automatizados
+- Validar build do backend
+- Garantir estabilidade da aplicação
+- Detectar erros antes do deploy
+- Automatizar integração contínua
 
 ---
 
@@ -243,6 +272,10 @@ Rota protegida por JWT.
 
 ```bash
 campaign-intelligence-platform
+├── .github
+│   └── workflows
+│       └── ci.yml
+│
 ├── backend
 │   ├── prisma
 │   │   ├── migrations
@@ -257,10 +290,17 @@ campaign-intelligence-platform
 │   │   ├── utils
 │   │   └── server.ts
 │   │
+│   ├── tests
+│   │   ├── auth.test.ts
+│   │   └── health.test.ts
+│   │
 │   ├── package.json
 │   └── tsconfig.json
 │
 ├── frontend
+│   ├── public
+│   │   └── favicon.svg
+│   │
 │   ├── src
 │   │   ├── App.tsx
 │   │   ├── App.css
@@ -361,6 +401,65 @@ http://localhost:5173
 
 ---
 
+## Testes Automatizados
+
+O backend possui testes automatizados utilizando Vitest e Supertest para validação das rotas e estabilidade da API.
+
+Executar testes:
+
+```bash
+cd backend
+npm run test
+```
+
+### Cobertura de testes
+
+- Autenticação
+- Health check
+- Respostas da API
+- Status HTTP
+- Integração entre rotas
+- Middleware de proteção
+
+---
+
+## CI/CD
+
+O projeto possui integração contínua utilizando GitHub Actions.
+
+A pipeline automatiza:
+
+- Instalação de dependências
+- Build do backend
+- Execução de testes automatizados
+- Verificação de estabilidade da aplicação
+- Processo de integração contínua
+
+Arquivo principal da pipeline:
+
+```txt
+.github/workflows/ci.yml
+```
+
+---
+
+## Segurança
+
+A aplicação implementa múltiplas camadas de segurança para proteção da API e autenticação dos usuários.
+
+### Recursos implementados
+
+- JWT Authentication
+- Password hashing com bcrypt
+- Middleware de autenticação
+- Rotas protegidas
+- Validação com Zod
+- Rate limiting
+- Error handling global
+- Sanitização de entrada
+
+---
+
 ## Health Check
 
 ```http
@@ -411,6 +510,11 @@ Mesmo sendo um desafio com foco principal em backend, foram adicionadas melhoria
 - Deploy do backend
 - Deploy do frontend
 - Estrutura de código organizada
+- Testes automatizados
+- Integração contínua com GitHub Actions
+- Build automatizado
+- Middleware global de erros
+- Health monitoring
 
 ---
 
@@ -431,6 +535,13 @@ Por isso, caso o serviço fique inativo por algum tempo, a primeira requisição
 - Docker
 - CI/CD
 - Banco PostgreSQL em produção
+- PostgreSQL
+- Testes E2E
+- WebSockets
+- Upload de arquivos
+- Multi-tenant
+- Observabilidade
+- Logs centralizados
 
 ---
 
