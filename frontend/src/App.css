@@ -1042,3 +1042,66 @@ tbody tr:hover td {
     border-radius: 20px;
   }
 }
+/* ================================
+   LOGIN PREMIUM COPY + VISUAL
+================================ */
+
+.login-card .eyebrow {
+  font-size: 0;
+}
+
+.login-card .eyebrow::after {
+  content: 'Campaign Intelligence Platform';
+  font-size: 12px;
+}
+
+.login-card h1 {
+  font-size: 0;
+}
+
+.login-card h1::after {
+  content: 'Bem-vindo de volta';
+  display: block;
+  font-size: 40px;
+  line-height: 1.1;
+}
+
+.login-card p {
+  font-size: 0;
+}
+
+.login-card p::after {
+  content: 'Acompanhe ROAS, lucro real e performance das suas campanhas em um painel inteligente.';
+  display: block;
+  font-size: 15px;
+  line-height: 1.7;
+  color: #94a3b8;
+}
+
+.login-card::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: 26px;
+  padding: 1px;
+  background: linear-gradient(
+    135deg,
+    rgba(45, 212, 191, 0.65),
+    transparent 36%,
+    rgba(37, 99, 235, 0.55)
+  );
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+.login-card button {
+  width: 100%;
+  margin-top: 16px;
+}
+
+.login-card button::before {
+  content: '';
+}
