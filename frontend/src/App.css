@@ -794,3 +794,251 @@ tbody tr:hover {
     text-align: center;
   }
 }
+/* ================================
+   PREMIUM MARKETING UI POLISH
+================================ */
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background:
+    linear-gradient(rgba(20, 184, 166, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(20, 184, 166, 0.035) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.75), transparent 85%);
+  pointer-events: none;
+}
+
+.login-page::before,
+.dashboard-page::before {
+  content: '';
+  position: fixed;
+  width: 520px;
+  height: 520px;
+  border-radius: 999px;
+  background: rgba(45, 212, 191, 0.08);
+  filter: blur(90px);
+  top: -180px;
+  right: -160px;
+  pointer-events: none;
+}
+
+.login-card {
+  animation: fadeUp 0.55s ease both;
+}
+
+.login-card::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: 26px;
+  padding: 1px;
+  background: linear-gradient(
+    135deg,
+    rgba(45, 212, 191, 0.55),
+    transparent 35%,
+    rgba(37, 99, 235, 0.45)
+  );
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+.login-card input + input {
+  margin-top: 10px;
+}
+
+.login-card button {
+  margin-top: 14px;
+  min-width: 120px;
+}
+
+.topbar {
+  padding: 8px 0 4px;
+}
+
+.topbar h1 {
+  text-shadow: 0 14px 45px rgba(45, 212, 191, 0.1);
+}
+
+.eyebrow {
+  background: linear-gradient(90deg, #2dd4bf, #38bdf8);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.sidebar {
+  box-shadow: inset -1px 0 0 rgba(45, 212, 191, 0.08);
+}
+
+.sidebar h2 {
+  letter-spacing: -0.5px;
+}
+
+.sidebar-tab {
+  position: relative;
+  overflow: hidden;
+}
+
+.sidebar-tab::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(45, 212, 191, 0.14), transparent);
+  opacity: 0;
+  transition: 0.2s ease;
+}
+
+.sidebar-tab:hover::before,
+.sidebar-tab.active::before {
+  opacity: 1;
+}
+
+.search-panel,
+.panel,
+.kpi-card,
+.insight-card {
+  box-shadow:
+    0 18px 55px rgba(0, 0, 0, 0.24),
+    inset 0 1px 0 rgba(255, 255, 255, 0.025);
+}
+
+.search-panel {
+  border-color: rgba(45, 212, 191, 0.14);
+}
+
+input,
+.filters-row select {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.025);
+}
+
+button {
+  position: relative;
+  overflow: hidden;
+}
+
+button::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    120deg,
+    transparent,
+    rgba(255, 255, 255, 0.18),
+    transparent
+  );
+  transform: translateX(-120%);
+  transition: 0.45s ease;
+}
+
+button:hover::after {
+  transform: translateX(120%);
+}
+
+.kpi-card,
+.insight-card,
+.panel,
+.ranking-item {
+  animation: fadeUp 0.45s ease both;
+}
+
+.kpi-card:nth-child(2),
+.insight-card:nth-child(2) {
+  animation-delay: 0.04s;
+}
+
+.kpi-card:nth-child(3),
+.insight-card:nth-child(3) {
+  animation-delay: 0.08s;
+}
+
+.kpi-card:nth-child(4),
+.insight-card:nth-child(4) {
+  animation-delay: 0.12s;
+}
+
+.kpi-card strong {
+  letter-spacing: -0.5px;
+}
+
+.kpi-card.active {
+  background:
+    radial-gradient(
+      circle at top right,
+      rgba(255, 255, 255, 0.18),
+      transparent 35%
+    ),
+    linear-gradient(135deg, #0f766e, #2563eb);
+}
+
+.panel-title h3 {
+  letter-spacing: -0.3px;
+}
+
+.table-panel {
+  border-color: rgba(45, 212, 191, 0.12);
+}
+
+thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+tbody tr:hover td {
+  color: #ffffff;
+}
+
+.status-pill,
+.performance-badge {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.ranking-position {
+  box-shadow: 0 10px 24px rgba(37, 99, 235, 0.28);
+}
+
+.ranking-item {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.02);
+}
+
+.loading-card {
+  animation: fadeUp 0.35s ease both;
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 760px) {
+  .login-card {
+    padding: 28px;
+  }
+
+  .login-card h1 {
+    font-size: 32px;
+  }
+
+  .search-panel {
+    padding: 14px;
+  }
+
+  .panel,
+  .kpi-card,
+  .insight-card {
+    border-radius: 20px;
+  }
+}
