@@ -4,6 +4,32 @@ Aplicação fullstack para gerenciamento inteligente de campanhas de marketing, 
 
 ---
 
+# Preview
+
+## Login
+
+![Login](./assets/login.png)
+
+---
+
+## Dashboard
+
+![Dashboard](./assets/dashboard.png)
+
+---
+
+## Analytics
+
+![Charts](./assets/charts.png)
+
+---
+
+## Gestão de Campanhas
+
+![Campaigns](./assets/campaigns-list.png)
+
+---
+
 ## Links do Projeto
 
 ### Frontend
@@ -244,6 +270,12 @@ campaign-intelligence-platform
 │   ├── package.json
 │   └── vite.config.ts
 │
+├── assets
+│   ├── login.png
+│   ├── dashboard.png
+│   ├── charts.png
+│   └── campaigns-list.png
+│
 └── README.md
 ```
 
@@ -399,6 +431,16 @@ Por isso, caso o serviço fique inativo por algum tempo, a primeira requisição
 - Docker
 - CI/CD
 - Banco PostgreSQL em produção
+
+---
+
+# Live Demo
+
+Frontend:
+https://campaign-intelligence-platform-roan.vercel.app/
+
+API:
+https://campaign-intelligence-platform.onrender.com/health
 
 ---
 
