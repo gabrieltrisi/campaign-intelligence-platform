@@ -19,7 +19,14 @@ app.use(
     origin: [
       'http://localhost:5173',
       'http://localhost:5174',
+
       'https://campaign-intelligence-platform.vercel.app',
+
+      'https://campaign-intelligence-platform-roan.vercel.app',
+
+      'https://campaign-intelligence-platform-git-main-gabrieltrisis-projects.vercel.app',
+
+      'https://campaign-intelligence-platform-e4i08sbdk-gabrieltrisis-projects.vercel.app',
     ],
 
     credentials: true,
