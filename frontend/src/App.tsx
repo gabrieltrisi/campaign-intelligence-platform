@@ -465,39 +465,302 @@ function App() {
           <div className='loading-overlay'>
             <div className='loading-card'>
               <div className='loading-spinner' />
-
               <strong>Processando</strong>
-
               <span>Aguarde alguns segundos...</span>
             </div>
           </div>
         )}
 
-        <main className='login-page'>
-          <section className='login-card'>
-            <span className='eyebrow'>Campaign Intelligence</span>
-
-            <h1>Entre no painel</h1>
-
-            <p>Acesse o dashboard de performance de campanhas.</p>
-
-            <input
-              placeholder='E-mail'
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
+        <main
+          className='login-page'
+          style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+            minHeight: '100vh',
+            background: '#070b14',
+          }}
+        >
+          {/* Hero side */}
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center',
+              padding: '4rem 3.5rem',
+              position: 'relative',
+              overflow: 'hidden',
+              borderRight: '1px solid rgba(20, 184, 166, 0.1)',
+            }}
+          >
+            {/* Background grid decoration */}
+            <div
+              style={{
+                position: 'absolute',
+                inset: 0,
+                backgroundImage:
+                  'linear-gradient(rgba(20,184,166,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(20,184,166,0.03) 1px, transparent 1px)',
+                backgroundSize: '40px 40px',
+                pointerEvents: 'none',
+              }}
             />
 
-            <input
-              placeholder='Senha'
-              type='password'
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
+            {/* Glow orb */}
+            <div
+              style={{
+                position: 'absolute',
+                top: '-120px',
+                left: '-120px',
+                width: '480px',
+                height: '480px',
+                borderRadius: '50%',
+                background:
+                  'radial-gradient(circle, rgba(20,184,166,0.08) 0%, transparent 70%)',
+                pointerEvents: 'none',
+              }}
             />
 
-            <button onClick={login} disabled={loading}>
-              {loading ? 'Entrando...' : 'Entrar'}
-            </button>
-          </section>
+            <div style={{ position: 'relative', zIndex: 1 }}>
+              <div
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  background: 'rgba(20,184,166,0.08)',
+                  border: '1px solid rgba(20,184,166,0.2)',
+                  borderRadius: '999px',
+                  padding: '4px 14px',
+                  marginBottom: '2rem',
+                }}
+              >
+                <span
+                  style={{
+                    width: '6px',
+                    height: '6px',
+                    borderRadius: '50%',
+                    background: '#14b8a6',
+                    display: 'inline-block',
+                    boxShadow: '0 0 6px #14b8a6',
+                  }}
+                />
+                <span
+                  style={{
+                    fontSize: '12px',
+                    color: '#14b8a6',
+                    letterSpacing: '0.06em',
+                    fontWeight: 600,
+                  }}
+                >
+                  Campaign Intelligence Platform
+                </span>
+              </div>
+
+              <h1
+                style={{
+                  fontSize: '2.6rem',
+                  fontWeight: 700,
+                  color: '#f1f5f9',
+                  lineHeight: 1.2,
+                  marginBottom: '1.25rem',
+                  letterSpacing: '-0.02em',
+                }}
+              >
+                Transforme dados de
+                <br />
+                <span style={{ color: '#14b8a6' }}>marketing</span> em decisões
+                <br />
+                estratégicas.
+              </h1>
+
+              <p
+                style={{
+                  fontSize: '1rem',
+                  color: '#64748b',
+                  lineHeight: 1.7,
+                  maxWidth: '420px',
+                  marginBottom: '2.5rem',
+                }}
+              >
+                Acompanhe ROAS, lucro real, KPIs financeiros e performance de
+                campanhas em um único painel inteligente.
+              </p>
+
+              {/* Mock KPI cards */}
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(3, 1fr)',
+                  gap: '12px',
+                  maxWidth: '420px',
+                }}
+              >
+                {[
+                  { label: 'ROAS Médio', value: '3.82x', icon: '📈' },
+                  { label: 'Lucro Real', value: 'R$ 85k', icon: '💰' },
+                  { label: 'Campanhas', value: '+120', icon: '🚀' },
+                ].map((card) => (
+                  <div
+                    key={card.label}
+                    style={{
+                      background: 'rgba(255,255,255,0.03)',
+                      border: '1px solid rgba(255,255,255,0.07)',
+                      borderRadius: '12px',
+                      padding: '14px 16px',
+                      backdropFilter: 'blur(8px)',
+                    }}
+                  >
+                    <div style={{ fontSize: '18px', marginBottom: '6px' }}>
+                      {card.icon}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: '1.15rem',
+                        fontWeight: 700,
+                        color: '#f1f5f9',
+                        lineHeight: 1,
+                      }}
+                    >
+                      {card.value}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: '11px',
+                        color: '#475569',
+                        marginTop: '4px',
+                        fontWeight: 500,
+                      }}
+                    >
+                      {card.label}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Login form side */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '4rem 3rem',
+            }}
+          >
+            <section
+              className='login-card'
+              style={{
+                width: '100%',
+                maxWidth: '380px',
+                background: 'rgba(255,255,255,0.03)',
+                border: '1px solid rgba(255,255,255,0.08)',
+                borderRadius: '20px',
+                padding: '2.5rem',
+                backdropFilter: 'blur(12px)',
+              }}
+            >
+              <span
+                className='eyebrow'
+                style={{
+                  display: 'block',
+                  fontSize: '11px',
+                  letterSpacing: '0.1em',
+                  fontWeight: 600,
+                  color: '#14b8a6',
+                  textTransform: 'uppercase',
+                  marginBottom: '0.75rem',
+                }}
+              >
+                Campaign Intelligence
+              </span>
+
+              <h1
+                style={{
+                  fontSize: '1.6rem',
+                  fontWeight: 700,
+                  color: '#f1f5f9',
+                  marginBottom: '0.5rem',
+                  letterSpacing: '-0.01em',
+                }}
+              >
+                Bem-vindo de volta
+              </h1>
+
+              <p
+                style={{
+                  fontSize: '0.875rem',
+                  color: '#475569',
+                  marginBottom: '2rem',
+                  lineHeight: 1.6,
+                }}
+              >
+                Acesse o painel de performance de campanhas.
+              </p>
+
+              <div
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '12px',
+                  marginBottom: '1.25rem',
+                }}
+              >
+                <input
+                  placeholder='E-mail'
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  style={{
+                    background: 'rgba(255,255,255,0.05)',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    borderRadius: '10px',
+                    padding: '12px 16px',
+                    color: '#f1f5f9',
+                    fontSize: '14px',
+                    outline: 'none',
+                    width: '100%',
+                    boxSizing: 'border-box',
+                  }}
+                />
+
+                <input
+                  placeholder='Senha'
+                  type='password'
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  style={{
+                    background: 'rgba(255,255,255,0.05)',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    borderRadius: '10px',
+                    padding: '12px 16px',
+                    color: '#f1f5f9',
+                    fontSize: '14px',
+                    outline: 'none',
+                    width: '100%',
+                    boxSizing: 'border-box',
+                  }}
+                />
+              </div>
+
+              <button
+                onClick={login}
+                disabled={loading}
+                style={{
+                  width: '100%',
+                  padding: '13px',
+                  background: loading ? 'rgba(20,184,166,0.4)' : '#14b8a6',
+                  border: 'none',
+                  borderRadius: '10px',
+                  color: '#fff',
+                  fontSize: '14px',
+                  fontWeight: 700,
+                  cursor: loading ? 'not-allowed' : 'pointer',
+                  letterSpacing: '0.01em',
+                  transition: 'background 0.2s',
+                }}
+              >
+                {loading ? 'Entrando...' : 'Entrar no painel'}
+              </button>
+            </section>
+          </div>
         </main>
       </>
     );
@@ -509,9 +772,7 @@ function App() {
         <div className='loading-overlay'>
           <div className='loading-card'>
             <div className='loading-spinner' />
-
             <strong>Processando</strong>
-
             <span>Aguarde alguns segundos...</span>
           </div>
         </div>
@@ -519,58 +780,57 @@ function App() {
 
       <main className='dashboard-page'>
         <aside className='sidebar'>
-          <h2>Inteligência de campanha</h2>
+          <h2
+            style={{
+              fontSize: '0.9rem',
+              fontWeight: 700,
+              letterSpacing: '0.04em',
+              color: '#14b8a6',
+              textTransform: 'uppercase',
+              marginBottom: '1.5rem',
+            }}
+          >
+            Campaign Intelligence
+          </h2>
 
           <nav>
             <button
-              className={`sidebar-tab ${
-                activeFilter === 'all' ? 'active' : ''
-              }`}
+              className={`sidebar-tab ${activeFilter === 'all' ? 'active' : ''}`}
               onClick={() => setActiveFilter('all')}
             >
               Todas as campanhas
             </button>
 
             <button
-              className={`sidebar-tab ${
-                activeFilter === 'high-roas' ? 'active' : ''
-              }`}
+              className={`sidebar-tab ${activeFilter === 'high-roas' ? 'active' : ''}`}
               onClick={() => setActiveFilter('high-roas')}
             >
               ROAS alto
             </button>
 
             <button
-              className={`sidebar-tab ${
-                activeFilter === 'profitable' ? 'active' : ''
-              }`}
+              className={`sidebar-tab ${activeFilter === 'profitable' ? 'active' : ''}`}
               onClick={() => setActiveFilter('profitable')}
             >
               Campanhas lucrativas
             </button>
 
             <button
-              className={`sidebar-tab ${
-                activeFilter === 'attention' ? 'active' : ''
-              }`}
+              className={`sidebar-tab ${activeFilter === 'attention' ? 'active' : ''}`}
               onClick={() => setActiveFilter('attention')}
             >
               Atenção
             </button>
 
             <button
-              className={`sidebar-tab ${
-                activeFilter === 'critical' ? 'active' : ''
-              }`}
+              className={`sidebar-tab ${activeFilter === 'critical' ? 'active' : ''}`}
               onClick={() => setActiveFilter('critical')}
             >
               Críticas
             </button>
 
             <button
-              className={`sidebar-tab ${
-                activeFilter === 'high-investment' ? 'active' : ''
-              }`}
+              className={`sidebar-tab ${activeFilter === 'high-investment' ? 'active' : ''}`}
               onClick={() => {
                 setActiveFilter('high-investment');
                 setSortBy('cost');
@@ -581,9 +841,7 @@ function App() {
             </button>
 
             <button
-              className={`sidebar-tab ${
-                activeFilter === 'best-return' ? 'active' : ''
-              }`}
+              className={`sidebar-tab ${activeFilter === 'best-return' ? 'active' : ''}`}
               onClick={() => {
                 setActiveFilter('best-return');
                 setSortBy('realProfit');
@@ -598,13 +856,41 @@ function App() {
         <section className='content'>
           <header className='topbar'>
             <div>
-              <span className='eyebrow'>Desempenho de marketing</span>
+              <span
+                className='eyebrow'
+                style={{
+                  fontSize: '11px',
+                  letterSpacing: '0.1em',
+                  fontWeight: 600,
+                  color: '#14b8a6',
+                  textTransform: 'uppercase',
+                }}
+              >
+                Desempenho de marketing
+              </span>
 
-              <h1>Painel de Campanhas</h1>
+              <h1
+                style={{
+                  fontSize: '1.6rem',
+                  fontWeight: 700,
+                  color: '#f1f5f9',
+                  letterSpacing: '-0.02em',
+                  marginTop: '4px',
+                  marginBottom: '4px',
+                }}
+              >
+                Painel de Campanhas
+              </h1>
 
-              <p>
-                Visão para gestores de tráfego acompanharem investimento,
-                retorno, lucro real e eficiência das campanhas.
+              <p
+                style={{
+                  fontSize: '0.875rem',
+                  color: '#475569',
+                  lineHeight: 1.6,
+                }}
+              >
+                Acompanhe investimento, retorno, lucro real e eficiência das
+                suas campanhas em tempo real.
               </p>
             </div>
 
@@ -645,7 +931,7 @@ function App() {
               </select>
             </div>
 
-            <span>
+            <span style={{ fontSize: '12px', color: '#475569' }}>
               Exibindo {filteredCampaigns.length} de {pagination.totalItems}{' '}
               campanhas
             </span>
@@ -653,17 +939,47 @@ function App() {
 
           <section className='insights-grid'>
             <div className='insight-card primary'>
-              <span>Resumo</span>
+              <span
+                style={{
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  letterSpacing: '0.06em',
+                  textTransform: 'uppercase',
+                  color: '#14b8a6',
+                }}
+              >
+                Resumo executivo
+              </span>
               <strong>{executiveSummary}</strong>
             </div>
 
             <div className='insight-card'>
-              <span>Recomendação</span>
+              <span
+                style={{
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  letterSpacing: '0.06em',
+                  textTransform: 'uppercase',
+                  color: '#64748b',
+                }}
+              >
+                Recomendação
+              </span>
               <strong>{recommendation}</strong>
             </div>
 
             <div className='insight-card'>
-              <span>Melhor campanha</span>
+              <span
+                style={{
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  letterSpacing: '0.06em',
+                  textTransform: 'uppercase',
+                  color: '#64748b',
+                }}
+              >
+                Melhor campanha
+              </span>
               <strong>
                 {bestCampaign
                   ? `${bestCampaign.name} · ${bestCampaign.roas.toFixed(2)}x`
@@ -672,7 +988,17 @@ function App() {
             </div>
 
             <div className='insight-card'>
-              <span>Ponto de atenção</span>
+              <span
+                style={{
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  letterSpacing: '0.06em',
+                  textTransform: 'uppercase',
+                  color: '#64748b',
+                }}
+              >
+                Ponto de atenção
+              </span>
               <strong>
                 {worstCampaign
                   ? `${worstCampaign.name} · ${worstCampaign.roas.toFixed(2)}x`
@@ -697,7 +1023,7 @@ function App() {
             <div className='kpi-card'>
               <span>Lucro Bruto</span>
               <strong>{formatCurrency(totalGrossProfit)}</strong>
-              <small>Receita - investimento</small>
+              <small>Receita − investimento</small>
             </div>
 
             <div className='kpi-card active'>
@@ -727,7 +1053,7 @@ function App() {
             <div className='panel large'>
               <div className='panel-title'>
                 <h3>Retorno, Investimento e Lucro por Campanha</h3>
-                <span>Comparativo de performance</span>
+                <span>Comparativo de performance financeira</span>
               </div>
 
               {filteredCampaigns.length > 0 ? (
@@ -802,7 +1128,7 @@ function App() {
             <div className='panel'>
               <div className='panel-title'>
                 <h3>Eficiência por Campanha</h3>
-                <span>ROAS individual</span>
+                <span>ROAS individual por campanha</span>
               </div>
 
               {filteredCampaigns.length > 0 ? (
@@ -844,9 +1170,7 @@ function App() {
                     </div>
 
                     <div
-                      className={`performance-badge ${getPerformanceClass(
-                        campaign.roas
-                      )}`}
+                      className={`performance-badge ${getPerformanceClass(campaign.roas)}`}
                     >
                       {campaign.roas.toFixed(2)}x
                     </div>
@@ -865,39 +1189,39 @@ function App() {
             <div className='panel form-panel'>
               <div className='panel-title'>
                 <h3>Criar Campanha</h3>
-                <span>Dados enviados com JWT no header</span>
+                <span>Registre uma nova campanha no painel</span>
               </div>
 
               <div className='form-grid compact'>
                 <input
-                  placeholder='Nome'
+                  placeholder='Nome da campanha'
                   value={name}
                   onChange={(event) => setName(event.target.value)}
                 />
 
                 <input
-                  placeholder='Investimento'
+                  placeholder='Investimento (R$)'
                   type='number'
                   value={cost}
                   onChange={(event) => setCost(event.target.value)}
                 />
 
                 <input
-                  placeholder='Retorno gerado'
+                  placeholder='Retorno gerado (R$)'
                   type='number'
                   value={revenue}
                   onChange={(event) => setRevenue(event.target.value)}
                 />
 
                 <input
-                  placeholder='Taxas'
+                  placeholder='Taxas (R$)'
                   type='number'
                   value={fees}
                   onChange={(event) => setFees(event.target.value)}
                 />
 
                 <input
-                  placeholder='Despesas'
+                  placeholder='Despesas (R$)'
                   type='number'
                   value={expenses}
                   onChange={(event) => setExpenses(event.target.value)}
@@ -937,9 +1261,7 @@ function App() {
                     <td>{formatCurrency(campaign.realProfit)}</td>
                     <td>
                       <span
-                        className={`status-pill ${getPerformanceClass(
-                          campaign.roas
-                        )}`}
+                        className={`status-pill ${getPerformanceClass(campaign.roas)}`}
                       >
                         {getPerformanceLabel(campaign.roas)} ·{' '}
                         {campaign.roas.toFixed(2)}x
