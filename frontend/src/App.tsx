@@ -245,13 +245,6 @@ function App() {
     return 'Crítica';
   }
 
-  function getPerformanceClass(roas: number) {
-    if (roas >= 4) return 'excellent';
-    if (roas >= 2) return 'good';
-    if (roas >= 1) return 'warning';
-    return 'critical';
-  }
-
   function logout() {
     localStorage.removeItem('token');
     setToken('');
