@@ -35,10 +35,51 @@ const querySchema = z.object({
   order: z.enum(['asc', 'desc']).optional().default('desc'),
 });
 
+function formatZodError(error: ZodError) {
+  return {
+    message: 'Erro de validacao',
+    errors: error.issues.map((issue) => ({
+      path: issue.path.join('.'),
+      message: issue.message,
+    })),
+  };
+}
+
+function sortCampaignsWithMetrics<T extends Record<string, unknown>>(
+  campaigns: T[],
+  sortBy: string,
+  order: 'asc' | 'desc'
+) {
+  return [...campaigns].sort((a, b) => {
+    const firstValue = a[sortBy];
+    const secondValue = b[sortBy];
+
+    if (typeof firstValue === 'string' && typeof secondValue === 'string') {
+      return order === 'asc'
+        ? firstValue.localeCompare(secondValue)
+        : secondValue.localeCompare(firstValue);
+    }
+
+    if (typeof firstValue === 'number' && typeof secondValue === 'number') {
+      return order === 'asc'
+        ? firstValue - secondValue
+        : secondValue - firstValue;
+    }
+
+    return 0;
+  });
+}
+
 campaignRoutes.use(authMiddleware);
 
 campaignRoutes.post('/', async (req: AuthenticatedRequest, res) => {
   try {
+    if (!req.userId) {
+      return res.status(401).json({
+        message: 'Usuario nao autenticado',
+      });
+    }
+
     const data = campaignSchema.parse(req.body);
 
     const campaign = await prisma.campaign.create({
@@ -46,21 +87,23 @@ campaignRoutes.post('/', async (req: AuthenticatedRequest, res) => {
         name: data.name,
         cost: data.cost,
         revenue: data.revenue,
-        fees: data.fees,
-        expenses: data.expenses,
-        userId: req.userId as string,
+        fees: data.fees ?? 0,
+        expenses: data.expenses ?? 0,
+        userId: req.userId,
       },
     });
 
-    return res.status(201).json(attachCampaignMetrics(campaign));
+    const campaignWithMetrics = attachCampaignMetrics(campaign);
+
+    return res.status(201).json({
+      message: 'Campanha criada com sucesso',
+      data: campaignWithMetrics,
+    });
   } catch (error) {
     console.error('CREATE_CAMPAIGN_ERROR:', error);
 
     if (error instanceof ZodError) {
-      return res.status(400).json({
-        message: 'Erro de validacao',
-        errors: error.issues,
-      });
+      return res.status(400).json(formatZodError(error));
     }
 
     return res.status(500).json({
@@ -71,13 +114,18 @@ campaignRoutes.post('/', async (req: AuthenticatedRequest, res) => {
 
 campaignRoutes.get('/', async (req: AuthenticatedRequest, res) => {
   try {
+    if (!req.userId) {
+      return res.status(401).json({
+        message: 'Usuario nao autenticado',
+      });
+    }
+
     const { page, limit, search, sortBy, order } = querySchema.parse(req.query);
 
     const skip = (page - 1) * limit;
 
     const where = {
       userId: req.userId,
-
       ...(search
         ? {
             name: {
@@ -87,12 +135,38 @@ campaignRoutes.get('/', async (req: AuthenticatedRequest, res) => {
         : {}),
     };
 
+    const calculatedSortFields = ['grossProfit', 'realProfit', 'roas'];
+    const isCalculatedSort = calculatedSortFields.includes(sortBy);
+
     const canSortDirectly = ['name', 'cost', 'revenue', 'createdAt'].includes(
       sortBy
     );
 
-    const [campaigns, totalItems] = await Promise.all([
-      prisma.campaign.findMany({
+    const totalItems = await prisma.campaign.count({
+      where,
+    });
+
+    let campaignsWithMetrics = [];
+
+    if (isCalculatedSort) {
+      const allCampaigns = await prisma.campaign.findMany({
+        where,
+        orderBy: {
+          createdAt: 'desc',
+        },
+      });
+
+      const allCampaignsWithMetrics = attachCampaignsMetrics(allCampaigns);
+
+      const sortedCampaigns = sortCampaignsWithMetrics(
+        allCampaignsWithMetrics,
+        sortBy,
+        order
+      );
+
+      campaignsWithMetrics = sortedCampaigns.slice(skip, skip + limit);
+    } else {
+      const campaigns = await prisma.campaign.findMany({
         where,
         orderBy: canSortDirectly
           ? {
@@ -103,40 +177,15 @@ campaignRoutes.get('/', async (req: AuthenticatedRequest, res) => {
             },
         skip,
         take: limit,
-      }),
+      });
 
-      prisma.campaign.count({
-        where,
-      }),
-    ]);
-
-    let campaignsWithMetrics = attachCampaignsMetrics(campaigns);
-
-    if (sortBy === 'grossProfit') {
-      campaignsWithMetrics = campaignsWithMetrics.sort((a, b) =>
-        order === 'asc'
-          ? a.grossProfit - b.grossProfit
-          : b.grossProfit - a.grossProfit
-      );
-    }
-
-    if (sortBy === 'realProfit') {
-      campaignsWithMetrics = campaignsWithMetrics.sort((a, b) =>
-        order === 'asc'
-          ? a.realProfit - b.realProfit
-          : b.realProfit - a.realProfit
-      );
-    }
-
-    if (sortBy === 'roas') {
-      campaignsWithMetrics = campaignsWithMetrics.sort((a, b) =>
-        order === 'asc' ? a.roas - b.roas : b.roas - a.roas
-      );
+      campaignsWithMetrics = attachCampaignsMetrics(campaigns);
     }
 
     const totalPages = Math.ceil(totalItems / limit);
 
-    return res.json({
+    return res.status(200).json({
+      message: 'Campanhas listadas com sucesso',
       data: campaignsWithMetrics,
       pagination: {
         page,
@@ -156,10 +205,7 @@ campaignRoutes.get('/', async (req: AuthenticatedRequest, res) => {
     console.error('LIST_CAMPAIGNS_ERROR:', error);
 
     if (error instanceof ZodError) {
-      return res.status(400).json({
-        message: 'Erro de validacao',
-        errors: error.issues,
-      });
+      return res.status(400).json(formatZodError(error));
     }
 
     return res.status(500).json({
@@ -170,8 +216,13 @@ campaignRoutes.get('/', async (req: AuthenticatedRequest, res) => {
 
 campaignRoutes.delete('/:id', async (req: AuthenticatedRequest, res) => {
   try {
-    const paramId = req.params.id;
-    const id = Array.isArray(paramId) ? paramId[0] : paramId;
+    if (!req.userId) {
+      return res.status(401).json({
+        message: 'Usuario nao autenticado',
+      });
+    }
+
+    const { id } = req.params;
 
     if (!id) {
       return res.status(400).json({
