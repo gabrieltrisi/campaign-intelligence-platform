@@ -222,7 +222,7 @@ campaignRoutes.delete('/:id', async (req: AuthenticatedRequest, res) => {
       });
     }
 
-    const { id } = req.params;
+    const id = req.params.id as string;
 
     if (!id) {
       return res.status(400).json({
@@ -232,7 +232,7 @@ campaignRoutes.delete('/:id', async (req: AuthenticatedRequest, res) => {
 
     const campaign = await prisma.campaign.findFirst({
       where: {
-        id,
+        id: id,
         userId: req.userId,
       },
     });
