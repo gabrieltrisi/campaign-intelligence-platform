@@ -11,12 +11,20 @@ import {
   YAxis,
 } from 'recharts';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 
 import './App.css';
 
+// ─────────────────────────────────────────────────────────────────────────────
+// ENV
+// ─────────────────────────────────────────────────────────────────────────────
+
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3333';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TYPES
+// ─────────────────────────────────────────────────────────────────────────────
 
 type Campaign = {
   id: string;
@@ -64,6 +72,27 @@ type SortByType =
 
 type OrderType = 'asc' | 'desc';
 
+type FormErrors = {
+  name?: string;
+  cost?: string;
+  revenue?: string;
+  fees?: string;
+  expenses?: string;
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CONSTANTS
+// ─────────────────────────────────────────────────────────────────────────────
+
+const DEFAULT_PAGINATION: Pagination = {
+  page: 1,
+  limit: 10,
+  totalItems: 0,
+  totalPages: 1,
+  hasNextPage: false,
+  hasPreviousPage: false,
+};
+
 const NAV_ITEMS: {
   filter: FilterType;
   label: string;
@@ -79,74 +108,228 @@ const NAV_ITEMS: {
   { filter: 'best-return', label: 'Melhor retorno', icon: '◇' },
 ];
 
+// ─────────────────────────────────────────────────────────────────────────────
+// DESIGN TOKENS
+// ─────────────────────────────────────────────────────────────────────────────
+
+const T = {
+  teal: '#14b8a6',
+  tealDim: 'rgba(20,184,166,0.12)',
+  tealBorder: 'rgba(20,184,166,0.22)',
+  tealGlow: 'rgba(20,184,166,0.35)',
+  blue: '#3b82f6',
+  blueDim: 'rgba(59,130,246,0.12)',
+  surface: 'rgba(255,255,255,0.03)',
+  surfaceHover: 'rgba(255,255,255,0.055)',
+  border: 'rgba(255,255,255,0.07)',
+  borderStrong: 'rgba(255,255,255,0.12)',
+  bg: '#070b14',
+  bgPanel: '#0d1220',
+  bgPanelHover: '#0f1526',
+  text: '#f1f5f9',
+  textMuted: '#64748b',
+  textSub: '#94a3b8',
+  textDim: '#334155',
+  green: '#34d399',
+  greenDim: 'rgba(52,211,153,0.12)',
+  greenBorder: 'rgba(52,211,153,0.25)',
+  red: '#f87171',
+  redDim: 'rgba(239,68,68,0.10)',
+  redBorder: 'rgba(239,68,68,0.22)',
+  amber: '#fbbf24',
+  amberDim: 'rgba(251,191,36,0.12)',
+  amberBorder: 'rgba(251,191,36,0.25)',
+  purple: '#a78bfa',
+  purpleDim: 'rgba(167,139,250,0.08)',
+  purpleBorder: 'rgba(167,139,250,0.2)',
+  orange: '#fb923c',
+  orangeDim: 'rgba(251,146,60,0.08)',
+  orangeBorder: 'rgba(251,146,60,0.2)',
+} as const;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SHARED STYLES
+// ─────────────────────────────────────────────────────────────────────────────
+
+const inputStyle: React.CSSProperties = {
+  background: 'rgba(255,255,255,0.04)',
+  border: '1px solid rgba(255,255,255,0.09)',
+  borderRadius: '10px',
+  padding: '11px 14px',
+  color: T.text,
+  fontSize: '14px',
+  outline: 'none',
+  width: '100%',
+  boxSizing: 'border-box',
+  fontFamily: 'inherit',
+  transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
+};
+
+const inputErrorStyle: React.CSSProperties = {
+  background: 'rgba(255,255,255,0.04)',
+  border: `1px solid ${T.redBorder}`,
+  borderRadius: '10px',
+  padding: '11px 14px',
+  color: T.text,
+  fontSize: '14px',
+  outline: 'none',
+  width: '100%',
+  boxSizing: 'border-box',
+  fontFamily: 'inherit',
+  transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
+  boxShadow: `0 0 0 3px ${T.redDim}`,
+};
+
+const selectStyle: React.CSSProperties = {
+  background: 'rgba(255,255,255,0.04)',
+  border: '1px solid rgba(255,255,255,0.09)',
+  borderRadius: '10px',
+  padding: '10px 14px',
+  color: T.textSub,
+  fontSize: '13px',
+  outline: 'none',
+  cursor: 'pointer',
+  fontFamily: 'inherit',
+  transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
+};
+
+const panelStyle: React.CSSProperties = {
+  background: T.bgPanel,
+  border: `1px solid ${T.border}`,
+  borderRadius: '16px',
+  padding: '1.5rem',
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// UTILITY FUNCTIONS
+// ─────────────────────────────────────────────────────────────────────────────
+
+function formatCurrency(value: number): string {
+  return value.toLocaleString('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+  });
+}
+
+function getPerformanceLabel(roas: number): string {
+  if (roas >= 4) return 'Excelente';
+  if (roas >= 2) return 'Boa';
+  if (roas >= 1) return 'Atenção';
+  return 'Crítica';
+}
+
+function getRoasColor(roas: number): string {
+  if (roas >= 4) return T.teal;
+  if (roas >= 2) return '#60a5fa';
+  if (roas >= 1) return T.amber;
+  return T.red;
+}
+
+function getRoasBg(roas: number): string {
+  if (roas >= 4) return T.tealDim;
+  if (roas >= 2) return T.blueDim;
+  if (roas >= 1) return T.amberDim;
+  return T.redDim;
+}
+
+function getRoasBorder(roas: number): string {
+  if (roas >= 4) return T.tealBorder;
+  if (roas >= 2) return 'rgba(59,130,246,0.25)';
+  if (roas >= 1) return T.amberBorder;
+  return T.redBorder;
+}
+
+function getRoasGlow(roas: number): string {
+  if (roas >= 4) return 'rgba(20,184,166,0.20)';
+  if (roas >= 2) return 'rgba(59,130,246,0.20)';
+  if (roas >= 1) return 'rgba(251,191,36,0.20)';
+  return 'rgba(239,68,68,0.20)';
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// APP COMPONENT
+// ─────────────────────────────────────────────────────────────────────────────
+
 function App() {
-  const [token, setToken] = useState(localStorage.getItem('token') || '');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  // ── Auth state ──────────────────────────────────────────────────────────
+
+  const [token, setToken] = useState<string>(
+    localStorage.getItem('token') || ''
+  );
+  const [email, setEmail] = useState<string>('');
+  const [password, setPassword] = useState<string>('');
+
+  // ── Campaigns state ─────────────────────────────────────────────────────
 
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [pagination, setPagination] = useState<Pagination>(DEFAULT_PAGINATION);
 
-  const [pagination, setPagination] = useState<Pagination>({
-    page: 1,
-    limit: 10,
-    totalItems: 0,
-    totalPages: 1,
-    hasNextPage: false,
-    hasPreviousPage: false,
-  });
+  // ── UI state ────────────────────────────────────────────────────────────
 
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [initialLoading, setInitialLoading] = useState<boolean>(false);
+  const [hasError, setHasError] = useState<boolean>(false);
+
+  // ── Filter / sort state ─────────────────────────────────────────────────
+
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
-
-  const [searchTerm, setSearchTerm] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
-
+  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [debouncedSearch, setDebouncedSearch] = useState<string>('');
   const [sortBy, setSortBy] = useState<SortByType>('createdAt');
   const [order, setOrder] = useState<OrderType>('desc');
 
-  const [name, setName] = useState('');
-  const [cost, setCost] = useState('');
-  const [revenue, setRevenue] = useState('');
-  const [fees, setFees] = useState('');
-  const [expenses, setExpenses] = useState('');
+  // ── Form state ──────────────────────────────────────────────────────────
 
-  function getFilteredCampaigns() {
-    let filtered = [...campaigns];
+  const [name, setName] = useState<string>('');
+  const [cost, setCost] = useState<string>('');
+  const [revenue, setRevenue] = useState<string>('');
+  const [fees, setFees] = useState<string>('');
+  const [expenses, setExpenses] = useState<string>('');
+  const [formErrors, setFormErrors] = useState<FormErrors>({});
 
-    if (activeFilter === 'high-roas') {
-      return filtered.filter((campaign) => campaign.roas >= 4);
+  // ── Refs ─────────────────────────────────────────────────────────────────
+
+  const firstInputRef = useRef<HTMLInputElement>(null);
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // FILTERED CAMPAIGNS
+  // ─────────────────────────────────────────────────────────────────────────
+
+  function getFilteredCampaigns(): Campaign[] {
+    const list = [...campaigns];
+
+    switch (activeFilter) {
+      case 'high-roas':
+        return list.filter((c) => c.roas >= 4);
+
+      case 'profitable':
+        return list.filter((c) => c.realProfit > 0);
+
+      case 'attention':
+        return list.filter((c) => c.roas >= 1 && c.roas < 2);
+
+      case 'critical':
+        return list.filter((c) => c.roas < 1 || c.realProfit < 0);
+
+      case 'high-investment':
+        return list.sort((a, b) => b.cost - a.cost);
+
+      case 'best-return':
+        return list.sort((a, b) => b.realProfit - a.realProfit);
+
+      default:
+        return list;
     }
-
-    if (activeFilter === 'profitable') {
-      return filtered.filter((campaign) => campaign.realProfit > 0);
-    }
-
-    if (activeFilter === 'attention') {
-      return filtered.filter(
-        (campaign) => campaign.roas >= 1 && campaign.roas < 2
-      );
-    }
-
-    if (activeFilter === 'critical') {
-      return filtered.filter(
-        (campaign) => campaign.roas < 1 || campaign.realProfit < 0
-      );
-    }
-
-    if (activeFilter === 'high-investment') {
-      return filtered.sort((a, b) => b.cost - a.cost);
-    }
-
-    if (activeFilter === 'best-return') {
-      return filtered.sort((a, b) => b.realProfit - a.realProfit);
-    }
-
-    return filtered;
   }
 
   const filteredCampaigns = getFilteredCampaigns();
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // AGGREGATES
+  // ─────────────────────────────────────────────────────────────────────────
+
   const totalCampaigns = filteredCampaigns.length;
+
   const totalCost = filteredCampaigns.reduce((acc, item) => acc + item.cost, 0);
 
   const totalRevenue = filteredCampaigns.reduce(
@@ -177,17 +360,19 @@ function App() {
         totalCampaigns
       : 0;
 
-  const bestCampaign = [...filteredCampaigns].sort(
-    (a, b) => b.roas - a.roas
-  )[0];
+  const bestCampaign =
+    [...filteredCampaigns].sort((a, b) => b.roas - a.roas)[0] ?? null;
 
-  const worstCampaign = [...filteredCampaigns].sort(
-    (a, b) => a.roas - b.roas
-  )[0];
+  const worstCampaign =
+    [...filteredCampaigns].sort((a, b) => a.roas - b.roas)[0] ?? null;
 
   const topCampaigns = [...filteredCampaigns]
     .sort((a, b) => b.roas - a.roas)
     .slice(0, 5);
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // CHART DATA
+  // ─────────────────────────────────────────────────────────────────────────
 
   const barData = filteredCampaigns.map((campaign) => ({
     name: campaign.name,
@@ -205,20 +390,17 @@ function App() {
     { name: 'Investimento', value: totalCost },
     { name: 'Taxas', value: totalFees },
     { name: 'Despesas', value: totalExpenses },
-    {
-      name: 'Lucro Real',
-      value: Math.max(totalRealProfit, 0),
-    },
+    { name: 'Lucro Real', value: Math.max(totalRealProfit, 0) },
   ].filter((item) => item.value > 0);
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // INSIGHT TEXTS
+  // ─────────────────────────────────────────────────────────────────────────
 
   const executiveSummary =
     totalCampaigns === 0
       ? 'Nenhuma campanha encontrada para o filtro selecionado.'
-      : `As campanhas filtradas geraram ${formatCurrency(
-          totalRevenue
-        )} em retorno, com ${formatCurrency(
-          totalRealProfit
-        )} de lucro real e ROAS médio de ${averageRoas.toFixed(2)}x.`;
+      : `As campanhas filtradas geraram ${formatCurrency(totalRevenue)} em retorno, com ${formatCurrency(totalRealProfit)} de lucro real e ROAS médio de ${averageRoas.toFixed(2)}x.`;
 
   const recommendation =
     totalCampaigns === 0
@@ -231,32 +413,16 @@ function App() {
             ? 'Performance em atenção. Revise criativos, segmentação e distribuição de verba.'
             : 'Performance crítica. Reavalie investimento, oferta e canais antes de escalar.';
 
-  function formatCurrency(value: number) {
-    return value.toLocaleString('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-    });
-  }
-
-  function getPerformanceLabel(roas: number) {
-    if (roas >= 4) return 'Excelente';
-    if (roas >= 2) return 'Boa';
-    if (roas >= 1) return 'Atenção';
-    return 'Crítica';
-  }
+  // ─────────────────────────────────────────────────────────────────────────
+  // AUTH FUNCTIONS
+  // ─────────────────────────────────────────────────────────────────────────
 
   function logout() {
     localStorage.removeItem('token');
     setToken('');
     setCampaigns([]);
-    setPagination({
-      page: 1,
-      limit: 10,
-      totalItems: 0,
-      totalPages: 1,
-      hasNextPage: false,
-      hasPreviousPage: false,
-    });
+    setPagination(DEFAULT_PAGINATION);
+    setHasError(false);
     toast.success('Sessão encerrada.');
   }
 
@@ -292,7 +458,14 @@ function App() {
     }
   }
 
-  async function loadCampaigns(page = 1) {
+  // ─────────────────────────────────────────────────────────────────────────
+  // CAMPAIGNS API FUNCTIONS
+  // ─────────────────────────────────────────────────────────────────────────
+
+  async function loadCampaigns(page = 1, isInitial = false) {
+    if (isInitial) setInitialLoading(true);
+    setHasError(false);
+
     try {
       const params = new URLSearchParams({
         page: String(page),
@@ -313,6 +486,7 @@ function App() {
       }
 
       if (!response.ok) {
+        setHasError(true);
         toast.error('Erro ao carregar campanhas.');
         return;
       }
@@ -321,41 +495,66 @@ function App() {
       setCampaigns(data.data);
       setPagination(data.pagination);
     } catch {
+      setHasError(true);
       toast.error('Erro ao carregar campanhas.');
+    } finally {
+      setInitialLoading(false);
     }
   }
 
-  async function createCampaign() {
+  function validateForm(): FormErrors {
+    const errors: FormErrors = {};
+
     const parsedCost = Number(cost);
     const parsedRevenue = Number(revenue);
     const parsedFees = Number(fees || 0);
     const parsedExpenses = Number(expenses || 0);
 
-    if (!name || !cost || !revenue) {
-      toast.error('Preencha nome, investimento e retorno gerado.');
+    if (!name.trim()) {
+      errors.name = 'Informe o nome da campanha.';
+    }
+
+    if (!cost) {
+      errors.cost = 'Informe o valor do investimento.';
+    } else if (Number.isNaN(parsedCost)) {
+      errors.cost = 'Valor numérico inválido.';
+    } else if (parsedCost <= 0) {
+      errors.cost = 'O investimento deve ser maior que zero.';
+    }
+
+    if (!revenue) {
+      errors.revenue = 'Informe o retorno gerado.';
+    } else if (Number.isNaN(parsedRevenue)) {
+      errors.revenue = 'Valor numérico inválido.';
+    } else if (parsedRevenue < 0) {
+      errors.revenue = 'O retorno não pode ser negativo.';
+    }
+
+    if (fees && Number.isNaN(parsedFees)) {
+      errors.fees = 'Valor numérico inválido.';
+    } else if (fees && parsedFees < 0) {
+      errors.fees = 'As taxas não podem ser negativas.';
+    }
+
+    if (expenses && Number.isNaN(parsedExpenses)) {
+      errors.expenses = 'Valor numérico inválido.';
+    } else if (expenses && parsedExpenses < 0) {
+      errors.expenses = 'As despesas não podem ser negativas.';
+    }
+
+    return errors;
+  }
+
+  async function createCampaign() {
+    const errors = validateForm();
+
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      toast.error('Corrija os campos destacados antes de continuar.');
       return;
     }
 
-    if (
-      Number.isNaN(parsedCost) ||
-      Number.isNaN(parsedRevenue) ||
-      Number.isNaN(parsedFees) ||
-      Number.isNaN(parsedExpenses)
-    ) {
-      toast.error('Informe apenas valores numéricos.');
-      return;
-    }
-
-    if (parsedCost <= 0) {
-      toast.error('O investimento deve ser maior que zero.');
-      return;
-    }
-
-    if (parsedRevenue < 0 || parsedFees < 0 || parsedExpenses < 0) {
-      toast.error('Retorno, taxas e despesas não podem ser negativos.');
-      return;
-    }
-
+    setFormErrors({});
     setLoading(true);
 
     try {
@@ -367,10 +566,10 @@ function App() {
         },
         body: JSON.stringify({
           name,
-          cost: parsedCost,
-          revenue: parsedRevenue,
-          fees: parsedFees,
-          expenses: parsedExpenses,
+          cost: Number(cost),
+          revenue: Number(revenue),
+          fees: Number(fees || 0),
+          expenses: Number(expenses || 0),
         }),
       });
 
@@ -386,9 +585,11 @@ function App() {
       setRevenue('');
       setFees('');
       setExpenses('');
+      setFormErrors({});
 
-      toast.success('Campanha criada com sucesso.');
+      toast.success('Campanha criada com sucesso!');
       await loadCampaigns(1);
+      firstInputRef.current?.focus();
     } catch {
       toast.error('Erro ao criar campanha.');
     } finally {
@@ -396,8 +597,10 @@ function App() {
     }
   }
 
-  async function deleteCampaign(id: string) {
-    const confirmed = confirm('Deseja remover esta campanha?');
+  async function deleteCampaign(id: string, campaignName: string) {
+    const confirmed = confirm(
+      `Remover a campanha "${campaignName}"?\n\nEsta ação não pode ser desfeita.`
+    );
     if (!confirmed) return;
 
     setLoading(true);
@@ -413,7 +616,7 @@ function App() {
         return;
       }
 
-      toast.success('Campanha removida.');
+      toast.success('Campanha removida com sucesso.');
       await loadCampaigns(pagination.page);
     } catch {
       toast.error('Erro ao remover campanha.');
@@ -434,6 +637,10 @@ function App() {
     }
   }
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // EFFECTS
+  // ─────────────────────────────────────────────────────────────────────────
+
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(searchTerm);
@@ -443,30 +650,13 @@ function App() {
 
   useEffect(() => {
     if (token) {
-      loadCampaigns(1);
+      loadCampaigns(1, campaigns.length === 0);
     }
   }, [token, debouncedSearch, sortBy, order]);
 
-  // ─── Styles ───────────────────────────────────────────────────────────────
-
-  const S = {
-    // shared tokens
-    teal: '#14b8a6',
-    tealDim: 'rgba(20,184,166,0.12)',
-    tealBorder: 'rgba(20,184,166,0.22)',
-    blue: '#3b82f6',
-    surface: 'rgba(255,255,255,0.03)',
-    surfaceHover: 'rgba(255,255,255,0.055)',
-    border: 'rgba(255,255,255,0.07)',
-    borderStrong: 'rgba(255,255,255,0.12)',
-    bg: '#070b14',
-    bgPanel: '#0d1220',
-    text: '#f1f5f9',
-    textMuted: '#64748b',
-    textDim: '#334155',
-  };
-
-  // ─── Login screen ─────────────────────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────────
+  // LOGIN SCREEN
+  // ─────────────────────────────────────────────────────────────────────────
 
   if (!token) {
     return (
@@ -478,34 +668,38 @@ function App() {
             display: 'grid',
             gridTemplateColumns: '1fr 1fr',
             minHeight: '100vh',
-            background: S.bg,
+            background: T.bg,
             fontFamily: "'Inter', 'system-ui', sans-serif",
           }}
         >
-          {/* ── Hero left ── */}
+          {/* ════════════════════════════════
+              HERO — LEFT COLUMN
+          ════════════════════════════════ */}
           <div
             style={{
               display: 'flex',
               flexDirection: 'column',
               justifyContent: 'center',
-              padding: '4rem 4rem',
+              padding: '4rem',
               position: 'relative',
               overflow: 'hidden',
-              borderRight: `1px solid ${S.tealBorder}`,
+              borderRight: `1px solid ${T.tealBorder}`,
             }}
           >
-            {/* grid bg */}
+            {/* grid background */}
             <div
               style={{
                 position: 'absolute',
                 inset: 0,
                 pointerEvents: 'none',
-                backgroundImage: `linear-gradient(${S.tealDim} 1px, transparent 1px), linear-gradient(90deg, ${S.tealDim} 1px, transparent 1px)`,
+                backgroundImage: `linear-gradient(${T.tealDim} 1px, transparent 1px),
+                                  linear-gradient(90deg, ${T.tealDim} 1px, transparent 1px)`,
                 backgroundSize: '48px 48px',
                 opacity: 0.35,
               }}
             />
-            {/* glow top-left */}
+
+            {/* glow — top left */}
             <div
               style={{
                 position: 'absolute',
@@ -519,7 +713,8 @@ function App() {
                 pointerEvents: 'none',
               }}
             />
-            {/* glow bottom-right */}
+
+            {/* glow — bottom right */}
             <div
               style={{
                 position: 'absolute',
@@ -535,14 +730,14 @@ function App() {
             />
 
             <div style={{ position: 'relative', zIndex: 1 }}>
-              {/* badge */}
+              {/* platform badge */}
               <div
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '8px',
-                  background: S.tealDim,
-                  border: `1px solid ${S.tealBorder}`,
+                  background: T.tealDim,
+                  border: `1px solid ${T.tealBorder}`,
                   borderRadius: '999px',
                   padding: '5px 16px',
                   marginBottom: '2.25rem',
@@ -553,15 +748,15 @@ function App() {
                     width: '7px',
                     height: '7px',
                     borderRadius: '50%',
-                    background: S.teal,
-                    boxShadow: `0 0 8px ${S.teal}`,
+                    background: T.teal,
+                    boxShadow: `0 0 8px ${T.teal}`,
                     display: 'inline-block',
                   }}
                 />
                 <span
                   style={{
                     fontSize: '11.5px',
-                    color: S.teal,
+                    color: T.teal,
                     letterSpacing: '0.07em',
                     fontWeight: 600,
                   }}
@@ -570,11 +765,12 @@ function App() {
                 </span>
               </div>
 
+              {/* headline */}
               <h1
                 style={{
                   fontSize: '2.75rem',
                   fontWeight: 800,
-                  color: S.text,
+                  color: T.text,
                   lineHeight: 1.18,
                   marginBottom: '1.25rem',
                   letterSpacing: '-0.03em',
@@ -584,8 +780,8 @@ function App() {
                 <br />
                 <span
                   style={{
-                    color: S.teal,
-                    textShadow: `0 0 32px rgba(20,184,166,0.35)`,
+                    color: T.teal,
+                    textShadow: `0 0 32px ${T.tealGlow}`,
                   }}
                 >
                   marketing
@@ -595,10 +791,11 @@ function App() {
                 estratégicas.
               </h1>
 
+              {/* subtitle */}
               <p
                 style={{
                   fontSize: '1rem',
-                  color: S.textMuted,
+                  color: T.textMuted,
                   lineHeight: 1.75,
                   maxWidth: '400px',
                   marginBottom: '2.75rem',
@@ -634,48 +831,19 @@ function App() {
                     sub: 'ativas monitoradas',
                   },
                 ].map((card) => (
-                  <div
-                    key={card.label}
-                    style={{
-                      background: S.surface,
-                      border: `1px solid ${S.border}`,
-                      borderRadius: '14px',
-                      padding: '16px',
-                      backdropFilter: 'blur(8px)',
-                    }}
-                  >
-                    <div
-                      style={{
-                        fontSize: '1.3rem',
-                        fontWeight: 800,
-                        color: S.text,
-                        lineHeight: 1,
-                        marginBottom: '5px',
-                        letterSpacing: '-0.02em',
-                      }}
-                    >
-                      {card.value}
-                    </div>
-                    <div
-                      style={{
-                        fontSize: '11px',
-                        color: S.teal,
-                        fontWeight: 600,
-                        marginBottom: '3px',
-                      }}
-                    >
-                      {card.label}
-                    </div>
-                    <div style={{ fontSize: '10px', color: S.textMuted }}>
-                      {card.sub}
-                    </div>
+                  <div key={card.label} className='login-kpi-card'>
+                    <div className='login-kpi-value'>{card.value}</div>
+                    <div className='login-kpi-label'>{card.label}</div>
+                    <div className='login-kpi-sub'>{card.sub}</div>
                   </div>
                 ))}
               </div>
             </div>
           </div>
 
-          {/* ── Login form right ── */}
+          {/* ════════════════════════════════
+              LOGIN FORM — RIGHT COLUMN
+          ════════════════════════════════ */}
           <div
             style={{
               display: 'flex',
@@ -686,73 +854,22 @@ function App() {
                 'linear-gradient(135deg, rgba(7,11,20,0.6) 0%, rgba(13,18,32,0.8) 100%)',
             }}
           >
-            <div
-              style={{
-                width: '100%',
-                maxWidth: '380px',
-                background: 'rgba(13,18,32,0.9)',
-                border: `1px solid ${S.borderStrong}`,
-                borderRadius: '22px',
-                padding: '2.75rem',
-                backdropFilter: 'blur(20px)',
-                boxShadow: '0 32px 80px rgba(0,0,0,0.5)',
-              }}
-            >
+            <div className='login-card'>
               {/* logo mark */}
-              <div
-                style={{
-                  width: '40px',
-                  height: '40px',
-                  borderRadius: '10px',
-                  background: S.tealDim,
-                  border: `1px solid ${S.tealBorder}`,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  marginBottom: '1.5rem',
-                  fontSize: '18px',
-                }}
-              >
-                ◈
-              </div>
+              <div className='login-logo'>◈</div>
 
-              <span
-                style={{
-                  display: 'block',
-                  fontSize: '10.5px',
-                  letterSpacing: '0.12em',
-                  fontWeight: 700,
-                  color: S.teal,
-                  textTransform: 'uppercase',
-                  marginBottom: '0.6rem',
-                }}
-              >
-                Campaign Intelligence
-              </span>
+              {/* eyebrow */}
+              <span className='login-eyebrow'>Campaign Intelligence</span>
 
-              <h2
-                style={{
-                  fontSize: '1.65rem',
-                  fontWeight: 800,
-                  color: S.text,
-                  marginBottom: '0.4rem',
-                  letterSpacing: '-0.02em',
-                }}
-              >
-                Bem-vindo de volta
-              </h2>
+              {/* title */}
+              <h2 className='login-title'>Bem-vindo de volta</h2>
 
-              <p
-                style={{
-                  fontSize: '0.875rem',
-                  color: S.textMuted,
-                  marginBottom: '2rem',
-                  lineHeight: 1.6,
-                }}
-              >
+              {/* subtitle */}
+              <p className='login-subtitle'>
                 Acesse o painel de performance de campanhas.
               </p>
 
+              {/* fields */}
               <div
                 style={{
                   display: 'flex',
@@ -762,7 +879,8 @@ function App() {
                 }}
               >
                 <input
-                  placeholder='E-mail'
+                  placeholder='E-mail corporativo'
+                  type='email'
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && login()}
@@ -778,39 +896,25 @@ function App() {
                 />
               </div>
 
+              {/* submit */}
               <button
                 onClick={login}
                 disabled={loading}
-                style={{
-                  width: '100%',
-                  padding: '14px',
-                  background: loading
-                    ? 'rgba(20,184,166,0.35)'
-                    : `linear-gradient(135deg, #14b8a6 0%, #0ea5a0 100%)`,
-                  border: 'none',
-                  borderRadius: '12px',
-                  color: '#fff',
-                  fontSize: '14px',
-                  fontWeight: 700,
-                  cursor: loading ? 'not-allowed' : 'pointer',
-                  letterSpacing: '0.02em',
-                  boxShadow: loading
-                    ? 'none'
-                    : '0 8px 24px rgba(20,184,166,0.3)',
-                  transition: 'all 0.2s',
-                }}
+                className='btn-primary'
+                style={{ width: '100%', padding: '14px', fontSize: '14px' }}
               >
-                {loading ? 'Entrando...' : 'Entrar no painel →'}
+                {loading ? (
+                  <>
+                    <span className='btn-spinner' />
+                    Entrando...
+                  </>
+                ) : (
+                  'Entrar no painel →'
+                )}
               </button>
 
-              <p
-                style={{
-                  fontSize: '11px',
-                  color: S.textDim,
-                  textAlign: 'center',
-                  marginTop: '1.5rem',
-                }}
-              >
+              {/* footer note */}
+              <p className='login-footer'>
                 Plataforma segura · Dados criptografados
               </p>
             </div>
@@ -820,7 +924,9 @@ function App() {
     );
   }
 
-  // ─── Dashboard ────────────────────────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────────
+  // DASHBOARD
+  // ─────────────────────────────────────────────────────────────────────────
 
   return (
     <>
@@ -829,18 +935,20 @@ function App() {
       <main
         className='dashboard-page'
         style={{
-          background: S.bg,
+          background: T.bg,
           fontFamily: "'Inter', 'system-ui', sans-serif",
           minHeight: '100vh',
           display: 'flex',
         }}
       >
-        {/* ── Sidebar ── */}
+        {/* ════════════════════════════════════════════════════
+            SIDEBAR
+        ════════════════════════════════════════════════════ */}
         <aside
           className='sidebar'
           style={{
             background: 'rgba(13,18,32,0.95)',
-            borderRight: `1px solid ${S.border}`,
+            borderRight: `1px solid ${T.border}`,
             backdropFilter: 'blur(12px)',
             padding: '1.75rem 1rem',
             display: 'flex',
@@ -864,13 +972,13 @@ function App() {
                   width: '28px',
                   height: '28px',
                   borderRadius: '7px',
-                  background: S.tealDim,
-                  border: `1px solid ${S.tealBorder}`,
+                  background: T.tealDim,
+                  border: `1px solid ${T.tealBorder}`,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   fontSize: '13px',
-                  color: S.teal,
+                  color: T.teal,
                 }}
               >
                 ◈
@@ -879,7 +987,7 @@ function App() {
                 style={{
                   fontSize: '13px',
                   fontWeight: 800,
-                  color: S.text,
+                  color: T.text,
                   letterSpacing: '-0.01em',
                 }}
               >
@@ -889,7 +997,7 @@ function App() {
             <div
               style={{
                 fontSize: '10px',
-                color: S.textMuted,
+                color: T.textMuted,
                 paddingLeft: '38px',
                 letterSpacing: '0.04em',
               }}
@@ -902,11 +1010,12 @@ function App() {
           <div
             style={{
               height: '1px',
-              background: S.border,
+              background: T.border,
               margin: '0 0.5rem 1rem',
             }}
           />
 
+          {/* navigation */}
           <nav
             style={{
               display: 'flex',
@@ -917,16 +1026,19 @@ function App() {
           >
             {NAV_ITEMS.map(({ filter, label, icon, danger }) => {
               const isActive = activeFilter === filter;
+
               return (
                 <button
                   key={filter}
-                  className={`sidebar-tab ${isActive ? 'active' : ''}`}
+                  className={`sidebar-tab${isActive ? ' active' : ''}`}
                   onClick={() => {
                     setActiveFilter(filter);
+
                     if (filter === 'high-investment') {
                       setSortBy('cost');
                       setOrder('desc');
                     }
+
                     if (filter === 'best-return') {
                       setSortBy('realProfit');
                       setOrder('desc');
@@ -939,8 +1051,8 @@ function App() {
                     padding: '9px 12px',
                     borderRadius: '10px',
                     border: 'none',
-                    background: isActive ? S.tealDim : 'transparent',
-                    color: isActive ? S.teal : danger ? '#f87171' : S.textMuted,
+                    background: isActive ? T.tealDim : 'transparent',
+                    color: isActive ? T.teal : danger ? T.red : T.textMuted,
                     fontSize: '13px',
                     fontWeight: isActive ? 600 : 400,
                     cursor: 'pointer',
@@ -948,7 +1060,7 @@ function App() {
                     width: '100%',
                     transition: 'all 0.15s',
                     borderLeft: isActive
-                      ? `2px solid ${S.teal}`
+                      ? `2px solid ${T.teal}`
                       : '2px solid transparent',
                   }}
                 >
@@ -959,12 +1071,12 @@ function App() {
             })}
           </nav>
 
-          {/* user footer */}
+          {/* logout */}
           <div
             style={{
               marginTop: 'auto',
               padding: '1rem 0.5rem 0',
-              borderTop: `1px solid ${S.border}`,
+              borderTop: `1px solid ${T.border}`,
             }}
           >
             <button
@@ -974,9 +1086,9 @@ function App() {
                 width: '100%',
                 padding: '9px 12px',
                 background: 'transparent',
-                border: `1px solid ${S.border}`,
+                border: `1px solid ${T.border}`,
                 borderRadius: '10px',
-                color: S.textMuted,
+                color: T.textMuted,
                 fontSize: '12px',
                 cursor: 'pointer',
                 fontWeight: 500,
@@ -988,16 +1100,18 @@ function App() {
           </div>
         </aside>
 
-        {/* ── Main content ── */}
+        {/* ════════════════════════════════════════════════════
+            MAIN CONTENT
+        ════════════════════════════════════════════════════ */}
         <section
           className='content'
           style={{ flex: 1, overflowY: 'auto', padding: '0' }}
         >
-          {/* topbar */}
+          {/* ── Topbar ── */}
           <header
             style={{
               padding: '1.75rem 2rem 0',
-              borderBottom: `1px solid ${S.border}`,
+              borderBottom: `1px solid ${T.border}`,
               background: 'rgba(7,11,20,0.7)',
               backdropFilter: 'blur(12px)',
               position: 'sticky',
@@ -1020,7 +1134,7 @@ function App() {
                       fontSize: '10.5px',
                       letterSpacing: '0.1em',
                       fontWeight: 700,
-                      color: S.teal,
+                      color: T.teal,
                       textTransform: 'uppercase',
                       display: 'block',
                       marginBottom: '4px',
@@ -1028,19 +1142,21 @@ function App() {
                   >
                     Desempenho de marketing
                   </span>
+
                   <h1
                     style={{
                       fontSize: '1.5rem',
                       fontWeight: 800,
-                      color: S.text,
+                      color: T.text,
                       letterSpacing: '-0.025em',
                       margin: '0 0 4px',
                     }}
                   >
                     Painel de Campanhas
                   </h1>
+
                   <p
-                    style={{ fontSize: '13px', color: S.textMuted, margin: 0 }}
+                    style={{ fontSize: '13px', color: T.textMuted, margin: 0 }}
                   >
                     Acompanhe investimento, retorno, lucro real e eficiência das
                     suas campanhas em tempo real.
@@ -1053,31 +1169,24 @@ function App() {
                     display: 'flex',
                     alignItems: 'center',
                     gap: '7px',
-                    background: S.tealDim,
-                    border: `1px solid ${S.tealBorder}`,
+                    background: T.tealDim,
+                    border: `1px solid ${T.tealBorder}`,
                     borderRadius: '999px',
                     padding: '5px 14px',
                     fontSize: '11px',
-                    color: S.teal,
+                    color: T.teal,
                     fontWeight: 600,
+                    flexShrink: 0,
                   }}
                 >
-                  <span
-                    style={{
-                      width: '6px',
-                      height: '6px',
-                      borderRadius: '50%',
-                      background: S.teal,
-                      display: 'inline-block',
-                      boxShadow: `0 0 6px ${S.teal}`,
-                    }}
-                  />
+                  <span className='live-dot' />
                   Live
                 </div>
               </div>
             </div>
           </header>
 
+          {/* ── Page body ── */}
           <div
             style={{
               padding: '2rem',
@@ -1088,13 +1197,10 @@ function App() {
               gap: '1.5rem',
             }}
           >
-            {/* ── Search & filters ── */}
+            {/* ── Search & sort bar ── */}
             <div
               style={{
-                background: S.bgPanel,
-                border: `1px solid ${S.border}`,
-                borderRadius: '16px',
-                padding: '1.25rem 1.5rem',
+                ...panelStyle,
                 display: 'flex',
                 flexDirection: 'column',
                 gap: '1rem',
@@ -1155,23 +1261,24 @@ function App() {
                   justifyContent: 'space-between',
                 }}
               >
-                <span style={{ fontSize: '12px', color: S.textMuted }}>
+                <span style={{ fontSize: '12px', color: T.textMuted }}>
                   Exibindo{' '}
-                  <strong style={{ color: S.text }}>
+                  <strong style={{ color: T.text }}>
                     {filteredCampaigns.length}
                   </strong>{' '}
                   de{' '}
-                  <strong style={{ color: S.text }}>
+                  <strong style={{ color: T.text }}>
                     {pagination.totalItems}
                   </strong>{' '}
                   campanhas
                 </span>
+
                 <span
                   style={{
                     fontSize: '11px',
-                    color: S.textMuted,
-                    background: S.surface,
-                    border: `1px solid ${S.border}`,
+                    color: T.textMuted,
+                    background: T.surface,
+                    border: `1px solid ${T.border}`,
                     borderRadius: '6px',
                     padding: '3px 10px',
                   }}
@@ -1181,770 +1288,895 @@ function App() {
               </div>
             </div>
 
-            {/* ── Insight cards ── */}
-            <section
-              className='insights-grid'
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-                gap: '12px',
-              }}
-            >
-              {[
-                {
-                  label: 'Resumo executivo',
-                  value: executiveSummary,
-                  accent: S.teal,
-                  accentBg: S.tealDim,
-                  accentBorder: S.tealBorder,
-                  icon: '◈',
-                },
-                {
-                  label: 'Recomendação estratégica',
-                  value: recommendation,
-                  accent: '#a78bfa',
-                  accentBg: 'rgba(167,139,250,0.08)',
-                  accentBorder: 'rgba(167,139,250,0.2)',
-                  icon: '◎',
-                },
-                {
-                  label: 'Melhor campanha',
-                  value: bestCampaign
-                    ? `${bestCampaign.name} · ${bestCampaign.roas.toFixed(2)}×`
-                    : 'Sem dados',
-                  accent: '#34d399',
-                  accentBg: 'rgba(52,211,153,0.08)',
-                  accentBorder: 'rgba(52,211,153,0.2)',
-                  icon: '◆',
-                },
-                {
-                  label: 'Ponto de atenção',
-                  value: worstCampaign
-                    ? `${worstCampaign.name} · ${worstCampaign.roas.toFixed(2)}×`
-                    : 'Sem dados',
-                  accent: '#fb923c',
-                  accentBg: 'rgba(251,146,60,0.08)',
-                  accentBorder: 'rgba(251,146,60,0.2)',
-                  icon: '◐',
-                },
-              ].map((card) => (
-                <div
-                  key={card.label}
+            {/* ── Skeleton loading ── */}
+            {initialLoading && (
+              <div className='skeleton-wrapper'>
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <div key={i} className='skeleton-card'>
+                    <div className='skeleton-line short' />
+                    <div className='skeleton-line tall' />
+                    <div className='skeleton-line medium' />
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* ── Error state ── */}
+            {hasError && !initialLoading && (
+              <div className='error-state-block'>
+                <div className='error-state-icon'>⚠</div>
+                <strong>Não foi possível carregar as campanhas</strong>
+                <span>
+                  Verifique sua conexão com o servidor e tente novamente.
+                </span>
+                <button
+                  className='btn-primary'
+                  onClick={() => loadCampaigns(1, true)}
                   style={{
-                    background: S.bgPanel,
-                    border: `1px solid ${S.border}`,
-                    borderRadius: '14px',
-                    padding: '1.25rem',
-                    borderTop: `2px solid ${card.accent}`,
+                    marginTop: '1rem',
+                    padding: '10px 24px',
+                    width: 'auto',
                   }}
                 >
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '7px',
-                      marginBottom: '10px',
-                    }}
-                  >
-                    <span
-                      style={{
-                        fontSize: '10px',
-                        color: card.accent,
-                        background: card.accentBg,
-                        border: `1px solid ${card.accentBorder}`,
-                        borderRadius: '6px',
-                        padding: '2px 8px',
-                        fontWeight: 700,
-                        letterSpacing: '0.06em',
-                        textTransform: 'uppercase',
-                      }}
-                    >
-                      {card.icon} {card.label}
-                    </span>
-                  </div>
-                  <p
-                    style={{
-                      fontSize: '13px',
-                      color: S.text,
-                      lineHeight: 1.6,
-                      margin: 0,
-                      fontWeight: 500,
-                    }}
-                  >
-                    {card.value}
-                  </p>
-                </div>
-              ))}
-            </section>
-
-            {/* ── KPI grid ── */}
-            <section
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
-                gap: '12px',
-              }}
-            >
-              {[
-                {
-                  label: 'Retorno Gerado',
-                  value: formatCurrency(totalRevenue),
-                  sub: `${totalCampaigns} campanhas`,
-                  highlight: false,
-                },
-                {
-                  label: 'Investimento',
-                  value: formatCurrency(totalCost),
-                  sub: 'Verba aplicada',
-                  highlight: false,
-                },
-                {
-                  label: 'Lucro Bruto',
-                  value: formatCurrency(totalGrossProfit),
-                  sub: 'Receita − investimento',
-                  highlight: false,
-                },
-                {
-                  label: 'Lucro Real',
-                  value: formatCurrency(totalRealProfit),
-                  sub: 'Após taxas e despesas',
-                  highlight: true,
-                },
-                {
-                  label: 'ROAS Médio',
-                  value: `${averageRoas.toFixed(2)}×`,
-                  sub: 'Eficiência média',
-                  highlight: false,
-                },
-                {
-                  label: 'Melhor Campanha',
-                  value: bestCampaign?.name || '—',
-                  sub: bestCampaign
-                    ? `${bestCampaign.roas.toFixed(2)}× ROAS`
-                    : 'Sem dados',
-                  highlight: false,
-                },
-              ].map((kpi) => (
-                <div
-                  key={kpi.label}
-                  style={{
-                    background: kpi.highlight ? S.tealDim : S.bgPanel,
-                    border: `1px solid ${kpi.highlight ? S.tealBorder : S.border}`,
-                    borderRadius: '14px',
-                    padding: '1.25rem',
-                    position: 'relative',
-                    overflow: 'hidden',
-                  }}
-                >
-                  {kpi.highlight && (
-                    <div
-                      style={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        height: '2px',
-                        background: `linear-gradient(90deg, ${S.teal}, transparent)`,
-                      }}
-                    />
-                  )}
-                  <div
-                    style={{
-                      fontSize: '10.5px',
-                      fontWeight: 600,
-                      color: kpi.highlight ? S.teal : S.textMuted,
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.08em',
-                      marginBottom: '8px',
-                    }}
-                  >
-                    {kpi.label}
-                  </div>
-                  <div
-                    style={{
-                      fontSize: '1.3rem',
-                      fontWeight: 800,
-                      color: kpi.highlight ? S.teal : S.text,
-                      letterSpacing: '-0.02em',
-                      marginBottom: '4px',
-                      lineHeight: 1.1,
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                    }}
-                  >
-                    {kpi.value}
-                  </div>
-                  <div style={{ fontSize: '11px', color: S.textMuted }}>
-                    {kpi.sub}
-                  </div>
-                </div>
-              ))}
-            </section>
-
-            {/* ── Charts grid ── */}
-            <section
-              className='charts-grid'
-              style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
-                gap: '1rem',
-              }}
-            >
-              {/* Bar chart — full width */}
-              <div style={{ ...panelStyle, gridColumn: '1 / -1' }}>
-                <PanelHeader
-                  title='Retorno, Investimento e Lucro por Campanha'
-                  sub='Comparativo de performance financeira'
-                />
-                {filteredCampaigns.length > 0 ? (
-                  <ResponsiveContainer width='100%' height={320}>
-                    <BarChart data={barData}>
-                      <CartesianGrid
-                        strokeDasharray='3 3'
-                        vertical={false}
-                        stroke='rgba(255,255,255,0.05)'
-                      />
-                      <XAxis
-                        dataKey='name'
-                        tick={{ fill: '#64748b', fontSize: 11 }}
-                        axisLine={false}
-                        tickLine={false}
-                      />
-                      <YAxis
-                        tick={{ fill: '#64748b', fontSize: 11 }}
-                        axisLine={false}
-                        tickLine={false}
-                      />
-                      <Tooltip
-                        contentStyle={{
-                          background: '#0d1220',
-                          border: '1px solid rgba(255,255,255,0.1)',
-                          borderRadius: '10px',
-                        }}
-                        labelStyle={{ color: '#f1f5f9', fontWeight: 600 }}
-                        itemStyle={{ color: '#94a3b8' }}
-                        formatter={(value) => formatCurrency(Number(value))}
-                      />
-                      <Bar
-                        dataKey='Receita'
-                        fill='#14b8a6'
-                        radius={[5, 5, 0, 0]}
-                      />
-                      <Bar
-                        dataKey='Custo'
-                        fill='#1e293b'
-                        radius={[5, 5, 0, 0]}
-                      />
-                      <Bar
-                        dataKey='Lucro'
-                        fill='#3b82f6'
-                        radius={[5, 5, 0, 0]}
-                      />
-                    </BarChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <EmptyState
-                    title='Nenhuma campanha para exibir'
-                    sub='Crie uma campanha ou altere o filtro.'
-                  />
-                )}
+                  Tentar novamente
+                </button>
               </div>
+            )}
 
-              {/* Pie chart */}
-              <div style={panelStyle}>
-                <PanelHeader
-                  title='Distribuição da Verba'
-                  sub='Investimento, taxas, despesas e lucro'
-                />
-                {pieData.length > 0 ? (
-                  <ResponsiveContainer width='100%' height={280}>
-                    <PieChart>
-                      <Pie
-                        data={pieData}
-                        dataKey='value'
-                        nameKey='name'
-                        innerRadius={70}
-                        outerRadius={110}
-                        paddingAngle={4}
-                      >
-                        {pieData.map((_, index) => (
-                          <Cell
-                            key={index}
-                            fill={
-                              ['#1e293b', '#f59e0b', '#ef4444', '#14b8a6'][
-                                index % 4
-                              ]
-                            }
-                          />
-                        ))}
-                      </Pie>
-                      <Tooltip
-                        contentStyle={{
-                          background: '#0d1220',
-                          border: '1px solid rgba(255,255,255,0.1)',
-                          borderRadius: '10px',
-                        }}
-                        itemStyle={{ color: '#94a3b8' }}
-                        formatter={(value) => formatCurrency(Number(value))}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <EmptyState
-                    title='Sem dados financeiros'
-                    sub='Cadastre uma campanha para ver a distribuição.'
-                  />
-                )}
-              </div>
-
-              {/* ROAS horizontal bar */}
-              <div style={panelStyle}>
-                <PanelHeader
-                  title='Eficiência por Campanha'
-                  sub='ROAS individual'
-                />
-                {filteredCampaigns.length > 0 ? (
-                  <ResponsiveContainer width='100%' height={280}>
-                    <BarChart data={roasData} layout='vertical'>
-                      <CartesianGrid
-                        strokeDasharray='3 3'
-                        horizontal={false}
-                        stroke='rgba(255,255,255,0.05)'
-                      />
-                      <XAxis
-                        type='number'
-                        tick={{ fill: '#64748b', fontSize: 11 }}
-                        axisLine={false}
-                        tickLine={false}
-                      />
-                      <YAxis
-                        dataKey='name'
-                        type='category'
-                        width={100}
-                        tick={{ fill: '#94a3b8', fontSize: 11 }}
-                        axisLine={false}
-                        tickLine={false}
-                      />
-                      <Tooltip
-                        contentStyle={{
-                          background: '#0d1220',
-                          border: '1px solid rgba(255,255,255,0.1)',
-                          borderRadius: '10px',
-                        }}
-                        itemStyle={{ color: '#94a3b8' }}
-                        formatter={(value) => `${Number(value).toFixed(2)}×`}
-                      />
-                      <Bar
-                        dataKey='ROAS'
-                        fill='#14b8a6'
-                        radius={[0, 5, 5, 0]}
-                      />
-                    </BarChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <EmptyState
-                    title='Nenhum ROAS calculado'
-                    sub='Adicione campanhas para analisar eficiência.'
-                  />
-                )}
-              </div>
-
-              {/* Ranking */}
-              <div style={panelStyle}>
-                <PanelHeader
-                  title='Ranking de Performance'
-                  sub='Top campanhas por ROAS'
-                />
-                <div
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '10px',
-                    marginTop: '4px',
-                  }}
-                >
-                  {topCampaigns.map((campaign, index) => (
-                    <div
-                      key={campaign.id}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '12px',
-                        padding: '10px 12px',
-                        background: S.surface,
-                        border: `1px solid ${S.border}`,
-                        borderRadius: '10px',
-                      }}
-                    >
-                      <div
-                        style={{
-                          width: '26px',
-                          height: '26px',
-                          borderRadius: '8px',
-                          background:
-                            index === 0 ? S.tealDim : 'rgba(255,255,255,0.04)',
-                          border: `1px solid ${index === 0 ? S.tealBorder : S.border}`,
-                          color: index === 0 ? S.teal : S.textMuted,
-                          fontSize: '12px',
-                          fontWeight: 700,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          flexShrink: 0,
-                        }}
-                      >
-                        {index + 1}
-                      </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div
-                          style={{
-                            fontSize: '13px',
-                            fontWeight: 600,
-                            color: S.text,
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                          }}
-                        >
-                          {campaign.name}
-                        </div>
-                        <div style={{ fontSize: '11px', color: S.textMuted }}>
-                          {formatCurrency(campaign.realProfit)} lucro real
-                        </div>
-                      </div>
-                      <span
-                        style={{
-                          fontSize: '12px',
-                          fontWeight: 700,
-                          padding: '3px 10px',
-                          borderRadius: '7px',
-                          background:
-                            campaign.roas >= 4
-                              ? 'rgba(20,184,166,0.12)'
-                              : campaign.roas >= 2
-                                ? 'rgba(59,130,246,0.12)'
-                                : campaign.roas >= 1
-                                  ? 'rgba(251,191,36,0.12)'
-                                  : 'rgba(239,68,68,0.12)',
-                          color:
-                            campaign.roas >= 4
-                              ? '#14b8a6'
-                              : campaign.roas >= 2
-                                ? '#60a5fa'
-                                : campaign.roas >= 1
-                                  ? '#fbbf24'
-                                  : '#f87171',
-                          flexShrink: 0,
-                        }}
-                      >
-                        {campaign.roas.toFixed(2)}×
-                      </span>
-                    </div>
-                  ))}
-                  {topCampaigns.length === 0 && (
-                    <EmptyState
-                      title='Sem ranking disponível'
-                      sub='Cadastre campanhas para montar o ranking.'
-                    />
-                  )}
-                </div>
-              </div>
-
-              {/* Create campaign form */}
-              <div style={{ ...panelStyle, gridColumn: '1 / -1' }}>
-                <PanelHeader
-                  title='Criar Campanha'
-                  sub='Registre uma nova campanha no painel'
-                />
-                <div
+            {/* ── Dashboard body (only shown when not loading and no error) ── */}
+            {!initialLoading && !hasError && (
+              <>
+                {/* ════════════════════════════════
+                    INSIGHT CARDS
+                ════════════════════════════════ */}
+                <section
+                  className='insights-grid'
                   style={{
                     display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
                     gap: '12px',
-                    marginBottom: '16px',
                   }}
                 >
                   {[
                     {
-                      ph: 'Nome da campanha',
-                      val: name,
-                      set: setName,
-                      type: 'text',
+                      label: 'Resumo executivo',
+                      value: executiveSummary,
+                      accent: T.teal,
+                      accentBg: T.tealDim,
+                      accentBorder: T.tealBorder,
+                      icon: '◈',
                     },
                     {
-                      ph: 'Investimento (R$)',
-                      val: cost,
-                      set: setCost,
-                      type: 'number',
+                      label: 'Recomendação estratégica',
+                      value: recommendation,
+                      accent: T.purple,
+                      accentBg: T.purpleDim,
+                      accentBorder: T.purpleBorder,
+                      icon: '◎',
                     },
                     {
-                      ph: 'Retorno gerado (R$)',
-                      val: revenue,
-                      set: setRevenue,
-                      type: 'number',
+                      label: 'Melhor campanha',
+                      value: bestCampaign
+                        ? `${bestCampaign.name} · ${bestCampaign.roas.toFixed(2)}×`
+                        : 'Sem dados',
+                      accent: T.green,
+                      accentBg: T.greenDim,
+                      accentBorder: T.greenBorder,
+                      icon: '◆',
                     },
                     {
-                      ph: 'Taxas (R$)',
-                      val: fees,
-                      set: setFees,
-                      type: 'number',
+                      label: 'Ponto de atenção',
+                      value: worstCampaign
+                        ? `${worstCampaign.name} · ${worstCampaign.roas.toFixed(2)}×`
+                        : 'Sem dados',
+                      accent: T.orange,
+                      accentBg: T.orangeDim,
+                      accentBorder: T.orangeBorder,
+                      icon: '◐',
                     },
-                    {
-                      ph: 'Despesas (R$)',
-                      val: expenses,
-                      set: setExpenses,
-                      type: 'number',
-                    },
-                  ].map(({ ph, val, set, type }) => (
-                    <input
-                      key={ph}
-                      placeholder={ph}
-                      type={type}
-                      value={val}
-                      onChange={(e) => set(e.target.value)}
-                      style={{ ...inputStyle, fontSize: '13px' }}
-                    />
-                  ))}
-                </div>
-                <button
-                  onClick={createCampaign}
-                  disabled={loading}
-                  style={{
-                    padding: '12px 28px',
-                    background: loading ? 'rgba(20,184,166,0.35)' : S.teal,
-                    border: 'none',
-                    borderRadius: '10px',
-                    color: '#fff',
-                    fontSize: '13px',
-                    fontWeight: 700,
-                    cursor: loading ? 'not-allowed' : 'pointer',
-                    boxShadow: loading
-                      ? 'none'
-                      : `0 6px 20px rgba(20,184,166,0.25)`,
-                    transition: 'all 0.2s',
-                  }}
-                >
-                  {loading ? 'Criando...' : '+ Criar campanha'}
-                </button>
-              </div>
-            </section>
-
-            {/* ── Table ── */}
-            <section style={{ ...panelStyle, overflow: 'hidden' }}>
-              <PanelHeader
-                title='Campanhas'
-                sub='Listagem filtrada para análise de tráfego pago'
-              />
-
-              <div style={{ overflowX: 'auto', marginTop: '8px' }}>
-                <table
-                  style={{
-                    width: '100%',
-                    borderCollapse: 'collapse',
-                    fontSize: '13px',
-                  }}
-                >
-                  <thead>
-                    <tr style={{ borderBottom: `1px solid ${S.border}` }}>
-                      {[
-                        'Nome',
-                        'Investimento',
-                        'Retorno',
-                        'Lucro Real',
-                        'Eficiência',
-                        '',
-                      ].map((h) => (
-                        <th
-                          key={h}
-                          style={{
-                            padding: '10px 12px',
-                            textAlign: 'left',
-                            fontSize: '10.5px',
-                            fontWeight: 700,
-                            color: S.textMuted,
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.07em',
-                            whiteSpace: 'nowrap',
-                          }}
-                        >
-                          {h}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredCampaigns.map((campaign) => (
-                      <tr
-                        key={campaign.id}
+                  ].map((card) => (
+                    <div
+                      key={card.label}
+                      className='insight-card'
+                      style={{
+                        background: T.bgPanel,
+                        border: `1px solid ${T.border}`,
+                        borderTop: `2px solid ${card.accent}`,
+                      }}
+                    >
+                      <div
                         style={{
-                          borderBottom: `1px solid ${S.border}`,
-                          transition: 'background 0.15s',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '7px',
+                          marginBottom: '10px',
                         }}
-                        onMouseEnter={(e) =>
-                          (e.currentTarget.style.background = S.surfaceHover)
-                        }
-                        onMouseLeave={(e) =>
-                          (e.currentTarget.style.background = 'transparent')
-                        }
                       >
-                        <td
+                        <span
                           style={{
-                            padding: '12px',
-                            color: S.text,
-                            fontWeight: 500,
+                            fontSize: '10px',
+                            color: card.accent,
+                            background: card.accentBg,
+                            border: `1px solid ${card.accentBorder}`,
+                            borderRadius: '6px',
+                            padding: '2px 8px',
+                            fontWeight: 700,
+                            letterSpacing: '0.06em',
+                            textTransform: 'uppercase',
                           }}
                         >
-                          {campaign.name}
-                        </td>
-                        <td style={{ padding: '12px', color: S.textMuted }}>
-                          {formatCurrency(campaign.cost)}
-                        </td>
-                        <td style={{ padding: '12px', color: S.textMuted }}>
-                          {formatCurrency(campaign.revenue)}
-                        </td>
-                        <td style={{ padding: '12px' }}>
-                          <span
-                            style={{
-                              color:
-                                campaign.realProfit >= 0
-                                  ? '#34d399'
-                                  : '#f87171',
-                              fontWeight: 600,
-                            }}
-                          >
-                            {formatCurrency(campaign.realProfit)}
-                          </span>
-                        </td>
-                        <td style={{ padding: '12px' }}>
-                          <span
-                            style={{
-                              fontSize: '11.5px',
-                              fontWeight: 700,
-                              padding: '4px 10px',
-                              borderRadius: '7px',
-                              background:
-                                campaign.roas >= 4
-                                  ? 'rgba(20,184,166,0.12)'
-                                  : campaign.roas >= 2
-                                    ? 'rgba(59,130,246,0.12)'
-                                    : campaign.roas >= 1
-                                      ? 'rgba(251,191,36,0.12)'
-                                      : 'rgba(239,68,68,0.12)',
-                              color:
-                                campaign.roas >= 4
-                                  ? '#14b8a6'
-                                  : campaign.roas >= 2
-                                    ? '#60a5fa'
-                                    : campaign.roas >= 1
-                                      ? '#fbbf24'
-                                      : '#f87171',
-                            }}
-                          >
-                            {getPerformanceLabel(campaign.roas)} ·{' '}
-                            {campaign.roas.toFixed(2)}×
-                          </span>
-                        </td>
-                        <td style={{ padding: '12px', textAlign: 'right' }}>
-                          <button
-                            className='danger'
-                            onClick={() => deleteCampaign(campaign.id)}
-                            style={{
-                              padding: '5px 12px',
-                              background: 'rgba(239,68,68,0.08)',
-                              border: '1px solid rgba(239,68,68,0.2)',
-                              borderRadius: '7px',
-                              color: '#f87171',
-                              fontSize: '12px',
-                              fontWeight: 600,
-                              cursor: 'pointer',
-                              transition: 'all 0.15s',
-                            }}
-                          >
-                            Remover
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
+                          {card.icon} {card.label}
+                        </span>
+                      </div>
 
-                    {filteredCampaigns.length === 0 && (
-                      <tr>
-                        <td
-                          colSpan={6}
+                      <p
+                        style={{
+                          fontSize: '13px',
+                          color: T.text,
+                          lineHeight: 1.6,
+                          margin: 0,
+                          fontWeight: 500,
+                        }}
+                      >
+                        {card.value}
+                      </p>
+                    </div>
+                  ))}
+                </section>
+
+                {/* ════════════════════════════════
+                    KPI GRID
+                ════════════════════════════════ */}
+                <section
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
+                    gap: '12px',
+                  }}
+                >
+                  {[
+                    {
+                      label: 'Retorno Gerado',
+                      value: formatCurrency(totalRevenue),
+                      sub: `${totalCampaigns} campanhas`,
+                      highlight: false,
+                      valueColor: undefined as string | undefined,
+                    },
+                    {
+                      label: 'Investimento',
+                      value: formatCurrency(totalCost),
+                      sub: 'Verba aplicada',
+                      highlight: false,
+                      valueColor: undefined,
+                    },
+                    {
+                      label: 'Lucro Bruto',
+                      value: formatCurrency(totalGrossProfit),
+                      sub: 'Receita − investimento',
+                      highlight: false,
+                      valueColor: totalGrossProfit >= 0 ? T.green : T.red,
+                    },
+                    {
+                      label: 'Lucro Real',
+                      value: formatCurrency(totalRealProfit),
+                      sub: 'Após taxas e despesas',
+                      highlight: true,
+                      valueColor: totalRealProfit >= 0 ? T.green : T.red,
+                    },
+                    {
+                      label: 'ROAS Médio',
+                      value: `${averageRoas.toFixed(2)}×`,
+                      sub: 'Eficiência média',
+                      highlight: false,
+                      valueColor: getRoasColor(averageRoas),
+                    },
+                    {
+                      label: 'Melhor Campanha',
+                      value: bestCampaign?.name || '—',
+                      sub: bestCampaign
+                        ? `${bestCampaign.roas.toFixed(2)}× ROAS`
+                        : 'Sem dados',
+                      highlight: false,
+                      valueColor: undefined,
+                    },
+                  ].map((kpi) => (
+                    <div
+                      key={kpi.label}
+                      className={`kpi-card${kpi.highlight ? ' active' : ''}`}
+                      style={{
+                        background: kpi.highlight ? T.tealDim : T.bgPanel,
+                        border: `1px solid ${kpi.highlight ? T.tealBorder : T.border}`,
+                        borderRadius: '14px',
+                        padding: '1.25rem',
+                        position: 'relative',
+                        overflow: 'hidden',
+                      }}
+                    >
+                      {kpi.highlight && (
+                        <div
                           style={{
-                            padding: '3rem',
-                            textAlign: 'center',
-                            color: S.textMuted,
-                            fontSize: '13px',
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            height: '2px',
+                            background: `linear-gradient(90deg, ${T.teal}, transparent)`,
                           }}
-                        >
-                          Nenhuma campanha encontrada para este filtro.
-                        </td>
-                      </tr>
+                        />
+                      )}
+
+                      <div
+                        style={{
+                          fontSize: '10.5px',
+                          fontWeight: 600,
+                          color: kpi.highlight ? T.teal : T.textMuted,
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.08em',
+                          marginBottom: '8px',
+                        }}
+                      >
+                        {kpi.label}
+                      </div>
+
+                      <div
+                        style={{
+                          fontSize: '1.3rem',
+                          fontWeight: 800,
+                          color:
+                            kpi.valueColor ?? (kpi.highlight ? T.teal : T.text),
+                          letterSpacing: '-0.02em',
+                          marginBottom: '4px',
+                          lineHeight: 1.1,
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                        }}
+                      >
+                        {kpi.value}
+                      </div>
+
+                      <div style={{ fontSize: '11px', color: T.textMuted }}>
+                        {kpi.sub}
+                      </div>
+                    </div>
+                  ))}
+                </section>
+
+                {/* ════════════════════════════════
+                    CHARTS GRID
+                ════════════════════════════════ */}
+                <section
+                  className='charts-grid'
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: '1fr 1fr',
+                    gap: '1rem',
+                  }}
+                >
+                  {/* ── Bar chart — full width ── */}
+                  <div style={{ ...panelStyle, gridColumn: '1 / -1' }}>
+                    <PanelHeader
+                      title='Retorno, Investimento e Lucro por Campanha'
+                      sub='Comparativo de performance financeira'
+                    />
+
+                    {filteredCampaigns.length > 0 ? (
+                      <ResponsiveContainer width='100%' height={320}>
+                        <BarChart data={barData}>
+                          <CartesianGrid
+                            strokeDasharray='3 3'
+                            vertical={false}
+                            stroke='rgba(255,255,255,0.05)'
+                          />
+                          <XAxis
+                            dataKey='name'
+                            tick={{ fill: '#64748b', fontSize: 11 }}
+                            axisLine={false}
+                            tickLine={false}
+                          />
+                          <YAxis
+                            tick={{ fill: '#64748b', fontSize: 11 }}
+                            axisLine={false}
+                            tickLine={false}
+                          />
+                          <Tooltip
+                            contentStyle={{
+                              background: '#0d1220',
+                              border: '1px solid rgba(255,255,255,0.1)',
+                              borderRadius: '10px',
+                            }}
+                            labelStyle={{ color: '#f1f5f9', fontWeight: 600 }}
+                            itemStyle={{ color: '#94a3b8' }}
+                            formatter={(value) => formatCurrency(Number(value))}
+                          />
+                          <Bar
+                            dataKey='Receita'
+                            fill='#14b8a6'
+                            radius={[5, 5, 0, 0]}
+                          />
+                          <Bar
+                            dataKey='Custo'
+                            fill='#1e293b'
+                            radius={[5, 5, 0, 0]}
+                          />
+                          <Bar
+                            dataKey='Lucro'
+                            fill='#3b82f6'
+                            radius={[5, 5, 0, 0]}
+                          />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <EmptyState
+                        title='Nenhuma campanha para exibir'
+                        sub='Crie uma campanha ou altere o filtro.'
+                      />
                     )}
-                  </tbody>
-                </table>
-              </div>
+                  </div>
 
-              {/* Pagination */}
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: '1rem 0 0',
-                  borderTop: `1px solid ${S.border}`,
-                  marginTop: '12px',
-                }}
-              >
-                <button
-                  onClick={goToPreviousPage}
-                  disabled={!pagination.hasPreviousPage}
-                  style={{
-                    padding: '8px 18px',
-                    background: 'transparent',
-                    border: `1px solid ${S.border}`,
-                    borderRadius: '9px',
-                    color: pagination.hasPreviousPage ? S.text : S.textMuted,
-                    fontSize: '12px',
-                    fontWeight: 600,
-                    cursor: pagination.hasPreviousPage
-                      ? 'pointer'
-                      : 'not-allowed',
-                    opacity: pagination.hasPreviousPage ? 1 : 0.4,
-                  }}
-                >
-                  ← Anterior
-                </button>
+                  {/* ── Pie chart ── */}
+                  <div style={panelStyle}>
+                    <PanelHeader
+                      title='Distribuição da Verba'
+                      sub='Investimento, taxas, despesas e lucro'
+                    />
 
-                <span style={{ fontSize: '12px', color: S.textMuted }}>
-                  Página{' '}
-                  <strong style={{ color: S.text }}>{pagination.page}</strong>{' '}
-                  de{' '}
-                  <strong style={{ color: S.text }}>
-                    {pagination.totalPages || 1}
-                  </strong>
-                </span>
+                    {pieData.length > 0 ? (
+                      <ResponsiveContainer width='100%' height={280}>
+                        <PieChart>
+                          <Pie
+                            data={pieData}
+                            dataKey='value'
+                            nameKey='name'
+                            innerRadius={70}
+                            outerRadius={110}
+                            paddingAngle={4}
+                          >
+                            {pieData.map((_, index) => (
+                              <Cell
+                                key={index}
+                                fill={
+                                  ['#1e293b', '#f59e0b', '#ef4444', '#14b8a6'][
+                                    index % 4
+                                  ]
+                                }
+                              />
+                            ))}
+                          </Pie>
+                          <Tooltip
+                            contentStyle={{
+                              background: '#0d1220',
+                              border: '1px solid rgba(255,255,255,0.1)',
+                              borderRadius: '10px',
+                            }}
+                            itemStyle={{ color: '#94a3b8' }}
+                            formatter={(value) => formatCurrency(Number(value))}
+                          />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <EmptyState
+                        title='Sem dados financeiros'
+                        sub='Cadastre uma campanha para ver a distribuição.'
+                      />
+                    )}
+                  </div>
 
-                <button
-                  onClick={goToNextPage}
-                  disabled={!pagination.hasNextPage}
-                  style={{
-                    padding: '8px 18px',
-                    background: 'transparent',
-                    border: `1px solid ${S.border}`,
-                    borderRadius: '9px',
-                    color: pagination.hasNextPage ? S.text : S.textMuted,
-                    fontSize: '12px',
-                    fontWeight: 600,
-                    cursor: pagination.hasNextPage ? 'pointer' : 'not-allowed',
-                    opacity: pagination.hasNextPage ? 1 : 0.4,
-                  }}
-                >
-                  Próxima →
-                </button>
-              </div>
-            </section>
+                  {/* ── ROAS horizontal bar ── */}
+                  <div style={panelStyle}>
+                    <PanelHeader
+                      title='Eficiência por Campanha'
+                      sub='ROAS individual'
+                    />
+
+                    {filteredCampaigns.length > 0 ? (
+                      <ResponsiveContainer width='100%' height={280}>
+                        <BarChart data={roasData} layout='vertical'>
+                          <CartesianGrid
+                            strokeDasharray='3 3'
+                            horizontal={false}
+                            stroke='rgba(255,255,255,0.05)'
+                          />
+                          <XAxis
+                            type='number'
+                            tick={{ fill: '#64748b', fontSize: 11 }}
+                            axisLine={false}
+                            tickLine={false}
+                          />
+                          <YAxis
+                            dataKey='name'
+                            type='category'
+                            width={100}
+                            tick={{ fill: '#94a3b8', fontSize: 11 }}
+                            axisLine={false}
+                            tickLine={false}
+                          />
+                          <Tooltip
+                            contentStyle={{
+                              background: '#0d1220',
+                              border: '1px solid rgba(255,255,255,0.1)',
+                              borderRadius: '10px',
+                            }}
+                            itemStyle={{ color: '#94a3b8' }}
+                            formatter={(value) =>
+                              `${Number(value).toFixed(2)}×`
+                            }
+                          />
+                          <Bar
+                            dataKey='ROAS'
+                            fill='#14b8a6'
+                            radius={[0, 5, 5, 0]}
+                          />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <EmptyState
+                        title='Nenhum ROAS calculado'
+                        sub='Adicione campanhas para analisar eficiência.'
+                      />
+                    )}
+                  </div>
+
+                  {/* ── Ranking ── */}
+                  <div style={panelStyle}>
+                    <PanelHeader
+                      title='Ranking de Performance'
+                      sub='Top campanhas por ROAS'
+                    />
+
+                    <div
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '10px',
+                        marginTop: '4px',
+                      }}
+                    >
+                      {topCampaigns.length > 0 ? (
+                        topCampaigns.map((campaign, index) => (
+                          <div key={campaign.id} className='ranking-item'>
+                            <div
+                              className='ranking-position'
+                              style={
+                                index === 0
+                                  ? {
+                                      background: T.tealDim,
+                                      border: `1px solid ${T.tealBorder}`,
+                                      color: T.teal,
+                                    }
+                                  : {}
+                              }
+                            >
+                              {index + 1}
+                            </div>
+
+                            <div className='ranking-info'>
+                              <strong>{campaign.name}</strong>
+                              <span>
+                                {formatCurrency(campaign.realProfit)} lucro real
+                              </span>
+                            </div>
+
+                            <span
+                              className='performance-badge'
+                              style={{
+                                background: getRoasBg(campaign.roas),
+                                color: getRoasColor(campaign.roas),
+                                border: `1px solid ${getRoasBorder(campaign.roas)}`,
+                              }}
+                            >
+                              {campaign.roas.toFixed(2)}×
+                            </span>
+                          </div>
+                        ))
+                      ) : (
+                        <EmptyState
+                          title='Sem ranking disponível'
+                          sub='Cadastre campanhas para montar o ranking.'
+                        />
+                      )}
+                    </div>
+                  </div>
+
+                  {/* ════════════════════════════════
+                      CREATE CAMPAIGN FORM
+                  ════════════════════════════════ */}
+                  <div style={{ ...panelStyle, gridColumn: '1 / -1' }}>
+                    <PanelHeader
+                      title='Criar Campanha'
+                      sub='Registre uma nova campanha no painel'
+                    />
+
+                    <div
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns:
+                          'repeat(auto-fit, minmax(160px, 1fr))',
+                        gap: '12px',
+                        marginBottom: '16px',
+                      }}
+                    >
+                      {/* Nome */}
+                      <div
+                        style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '4px',
+                        }}
+                      >
+                        <input
+                          ref={firstInputRef}
+                          placeholder='Nome da campanha *'
+                          type='text'
+                          value={name}
+                          onChange={(e) => {
+                            setName(e.target.value);
+                            if (formErrors.name) {
+                              setFormErrors((prev) => ({
+                                ...prev,
+                                name: undefined,
+                              }));
+                            }
+                          }}
+                          style={
+                            formErrors.name
+                              ? { ...inputErrorStyle, fontSize: '13px' }
+                              : { ...inputStyle, fontSize: '13px' }
+                          }
+                        />
+                        {formErrors.name && (
+                          <span className='field-error'>{formErrors.name}</span>
+                        )}
+                      </div>
+
+                      {/* Investimento */}
+                      <div
+                        style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '4px',
+                        }}
+                      >
+                        <input
+                          placeholder='Investimento (R$) *'
+                          type='number'
+                          value={cost}
+                          onChange={(e) => {
+                            setCost(e.target.value);
+                            if (formErrors.cost) {
+                              setFormErrors((prev) => ({
+                                ...prev,
+                                cost: undefined,
+                              }));
+                            }
+                          }}
+                          style={
+                            formErrors.cost
+                              ? { ...inputErrorStyle, fontSize: '13px' }
+                              : { ...inputStyle, fontSize: '13px' }
+                          }
+                        />
+                        {formErrors.cost && (
+                          <span className='field-error'>{formErrors.cost}</span>
+                        )}
+                      </div>
+
+                      {/* Retorno */}
+                      <div
+                        style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '4px',
+                        }}
+                      >
+                        <input
+                          placeholder='Retorno gerado (R$) *'
+                          type='number'
+                          value={revenue}
+                          onChange={(e) => {
+                            setRevenue(e.target.value);
+                            if (formErrors.revenue) {
+                              setFormErrors((prev) => ({
+                                ...prev,
+                                revenue: undefined,
+                              }));
+                            }
+                          }}
+                          style={
+                            formErrors.revenue
+                              ? { ...inputErrorStyle, fontSize: '13px' }
+                              : { ...inputStyle, fontSize: '13px' }
+                          }
+                        />
+                        {formErrors.revenue && (
+                          <span className='field-error'>
+                            {formErrors.revenue}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Taxas */}
+                      <div
+                        style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '4px',
+                        }}
+                      >
+                        <input
+                          placeholder='Taxas (R$)'
+                          type='number'
+                          value={fees}
+                          onChange={(e) => {
+                            setFees(e.target.value);
+                            if (formErrors.fees) {
+                              setFormErrors((prev) => ({
+                                ...prev,
+                                fees: undefined,
+                              }));
+                            }
+                          }}
+                          style={
+                            formErrors.fees
+                              ? { ...inputErrorStyle, fontSize: '13px' }
+                              : { ...inputStyle, fontSize: '13px' }
+                          }
+                        />
+                        {formErrors.fees && (
+                          <span className='field-error'>{formErrors.fees}</span>
+                        )}
+                      </div>
+
+                      {/* Despesas */}
+                      <div
+                        style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '4px',
+                        }}
+                      >
+                        <input
+                          placeholder='Despesas (R$)'
+                          type='number'
+                          value={expenses}
+                          onChange={(e) => {
+                            setExpenses(e.target.value);
+                            if (formErrors.expenses) {
+                              setFormErrors((prev) => ({
+                                ...prev,
+                                expenses: undefined,
+                              }));
+                            }
+                          }}
+                          style={
+                            formErrors.expenses
+                              ? { ...inputErrorStyle, fontSize: '13px' }
+                              : { ...inputStyle, fontSize: '13px' }
+                          }
+                        />
+                        {formErrors.expenses && (
+                          <span className='field-error'>
+                            {formErrors.expenses}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={createCampaign}
+                      disabled={loading}
+                      className='btn-primary'
+                      style={{ padding: '12px 28px', width: 'auto' }}
+                    >
+                      {loading ? (
+                        <>
+                          <span className='btn-spinner' />
+                          Criando...
+                        </>
+                      ) : (
+                        '+ Criar campanha'
+                      )}
+                    </button>
+                  </div>
+                </section>
+
+                {/* ════════════════════════════════
+                    CAMPAIGNS TABLE
+                ════════════════════════════════ */}
+                <section style={{ ...panelStyle, overflow: 'hidden' }}>
+                  <PanelHeader
+                    title='Campanhas'
+                    sub='Listagem filtrada para análise de tráfego pago'
+                  />
+
+                  {filteredCampaigns.length === 0 ? (
+                    <div className='empty-campaigns-block'>
+                      <div className='empty-campaigns-icon'>◈</div>
+                      <strong>Nenhuma campanha encontrada</strong>
+                      <span>
+                        {searchTerm
+                          ? `Nenhum resultado para "${searchTerm}". Tente outro termo.`
+                          : 'Crie sua primeira campanha ou selecione outro filtro na barra lateral.'}
+                      </span>
+                    </div>
+                  ) : (
+                    <div style={{ overflowX: 'auto', marginTop: '8px' }}>
+                      <table
+                        style={{
+                          width: '100%',
+                          borderCollapse: 'collapse',
+                          fontSize: '13px',
+                        }}
+                      >
+                        <thead>
+                          <tr style={{ borderBottom: `1px solid ${T.border}` }}>
+                            {[
+                              'Nome',
+                              'Investimento',
+                              'Retorno',
+                              'Lucro Real',
+                              'Eficiência',
+                              '',
+                            ].map((h) => (
+                              <th
+                                key={h}
+                                style={{
+                                  padding: '10px 12px',
+                                  textAlign: 'left',
+                                  fontSize: '10.5px',
+                                  fontWeight: 700,
+                                  color: T.textMuted,
+                                  textTransform: 'uppercase',
+                                  letterSpacing: '0.07em',
+                                  whiteSpace: 'nowrap',
+                                }}
+                              >
+                                {h}
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+
+                        <tbody>
+                          {filteredCampaigns.map((campaign) => (
+                            <tr
+                              key={campaign.id}
+                              className='table-row'
+                              style={{
+                                borderBottom: `1px solid ${T.border}`,
+                                transition: 'background 0.15s',
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.background =
+                                  T.surfaceHover;
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.background =
+                                  'transparent';
+                              }}
+                            >
+                              <td
+                                style={{
+                                  padding: '12px',
+                                  color: T.text,
+                                  fontWeight: 500,
+                                }}
+                              >
+                                {campaign.name}
+                              </td>
+
+                              <td
+                                style={{ padding: '12px', color: T.textMuted }}
+                              >
+                                {formatCurrency(campaign.cost)}
+                              </td>
+
+                              <td
+                                style={{ padding: '12px', color: T.textMuted }}
+                              >
+                                {formatCurrency(campaign.revenue)}
+                              </td>
+
+                              <td style={{ padding: '12px' }}>
+                                <span
+                                  style={{
+                                    color:
+                                      campaign.realProfit >= 0
+                                        ? T.green
+                                        : T.red,
+                                    fontWeight: 600,
+                                  }}
+                                >
+                                  {formatCurrency(campaign.realProfit)}
+                                </span>
+                              </td>
+
+                              <td style={{ padding: '12px' }}>
+                                <span
+                                  className='performance-badge'
+                                  style={{
+                                    background: getRoasBg(campaign.roas),
+                                    color: getRoasColor(campaign.roas),
+                                    border: `1px solid ${getRoasBorder(campaign.roas)}`,
+                                    boxShadow: `0 0 12px ${getRoasGlow(campaign.roas)}`,
+                                  }}
+                                >
+                                  {getPerformanceLabel(campaign.roas)} ·{' '}
+                                  {campaign.roas.toFixed(2)}×
+                                </span>
+                              </td>
+
+                              <td
+                                style={{ padding: '12px', textAlign: 'right' }}
+                              >
+                                <button
+                                  className='danger'
+                                  onClick={() =>
+                                    deleteCampaign(campaign.id, campaign.name)
+                                  }
+                                  style={{
+                                    padding: '5px 12px',
+                                    background: T.redDim,
+                                    border: `1px solid ${T.redBorder}`,
+                                    borderRadius: '7px',
+                                    color: T.red,
+                                    fontSize: '12px',
+                                    fontWeight: 600,
+                                    cursor: 'pointer',
+                                    transition: 'all 0.15s',
+                                  }}
+                                >
+                                  Remover
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+
+                  {/* Pagination */}
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '1rem 0 0',
+                      borderTop: `1px solid ${T.border}`,
+                      marginTop: '12px',
+                    }}
+                  >
+                    <button
+                      onClick={goToPreviousPage}
+                      disabled={!pagination.hasPreviousPage}
+                      className='btn-page'
+                    >
+                      ← Anterior
+                    </button>
+
+                    <span style={{ fontSize: '12px', color: T.textMuted }}>
+                      Página{' '}
+                      <strong style={{ color: T.text }}>
+                        {pagination.page}
+                      </strong>{' '}
+                      de{' '}
+                      <strong style={{ color: T.text }}>
+                        {pagination.totalPages || 1}
+                      </strong>
+                    </span>
+
+                    <button
+                      onClick={goToNextPage}
+                      disabled={!pagination.hasNextPage}
+                      className='btn-page'
+                    >
+                      Próxima →
+                    </button>
+                  </div>
+                </section>
+              </>
+            )}
           </div>
         </section>
       </main>
@@ -1952,76 +2184,17 @@ function App() {
   );
 }
 
-// ─── Shared style tokens ───────────────────────────────────────────────────────
-
-const inputStyle: React.CSSProperties = {
-  background: 'rgba(255,255,255,0.04)',
-  border: '1px solid rgba(255,255,255,0.09)',
-  borderRadius: '10px',
-  padding: '11px 14px',
-  color: '#f1f5f9',
-  fontSize: '14px',
-  outline: 'none',
-  width: '100%',
-  boxSizing: 'border-box',
-  fontFamily: 'inherit',
-};
-
-const selectStyle: React.CSSProperties = {
-  background: 'rgba(255,255,255,0.04)',
-  border: '1px solid rgba(255,255,255,0.09)',
-  borderRadius: '10px',
-  padding: '10px 14px',
-  color: '#94a3b8',
-  fontSize: '13px',
-  outline: 'none',
-  cursor: 'pointer',
-  fontFamily: 'inherit',
-};
-
-const panelStyle: React.CSSProperties = {
-  background: '#0d1220',
-  border: '1px solid rgba(255,255,255,0.07)',
-  borderRadius: '16px',
-  padding: '1.5rem',
-};
-
-// ─── Sub-components ────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// SUB-COMPONENTS
+// ─────────────────────────────────────────────────────────────────────────────
 
 function LoadingOverlay() {
   return (
-    <div
-      className='loading-overlay'
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 9999,
-        background: 'rgba(7,11,20,0.85)',
-        backdropFilter: 'blur(4px)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}
-    >
-      <div
-        style={{
-          background: '#0d1220',
-          border: '1px solid rgba(255,255,255,0.1)',
-          borderRadius: '18px',
-          padding: '2rem 2.5rem',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: '12px',
-        }}
-      >
+    <div className='loading-overlay'>
+      <div className='loading-card'>
         <div className='loading-spinner' />
-        <strong style={{ color: '#f1f5f9', fontSize: '14px' }}>
-          Processando
-        </strong>
-        <span style={{ color: '#64748b', fontSize: '12px' }}>
-          Aguarde alguns segundos...
-        </span>
+        <strong>Processando</strong>
+        <span>Aguarde alguns segundos...</span>
       </div>
     </div>
   );
@@ -2055,7 +2228,13 @@ function EmptyState({ title, sub }: { title: string; sub: string }) {
         color: '#64748b',
       }}
     >
-      <div style={{ fontSize: '24px', marginBottom: '10px', opacity: 0.4 }}>
+      <div
+        style={{
+          fontSize: '24px',
+          marginBottom: '10px',
+          opacity: 0.4,
+        }}
+      >
         ◈
       </div>
       <strong
