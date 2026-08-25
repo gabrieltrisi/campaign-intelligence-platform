@@ -1,0 +1,71 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="630" fill="#020617"/>
+
+  <circle cx="180" cy="90" r="220" fill="#14B8A6" opacity="0.22"/>
+  <circle cx="1040" cy="540" r="280" fill="#2563EB" opacity="0.24"/>
+  <circle cx="900" cy="120" r="170" fill="#38BDF8" opacity="0.12"/>
+
+  <rect x="70" y="70" width="1060" height="490" rx="34" fill="#0F172A" opacity="0.92"/>
+  <rect x="70.5" y="70.5" width="1059" height="489" rx="33.5" stroke="#2DD4BF" stroke-opacity="0.28"/>
+
+  <text x="110" y="145" fill="#2DD4BF" font-family="Inter, Arial, sans-serif" font-size="24" font-weight="800" letter-spacing="3">
+    CAMPAIGN INTELLIGENCE PLATFORM
+  </text>
+
+  <text x="110" y="225" fill="#FFFFFF" font-family="Inter, Arial, sans-serif" font-size="58" font-weight="900">
+    Dashboard Inteligente
+  </text>
+
+  <text x="110" y="292" fill="#FFFFFF" font-family="Inter, Arial, sans-serif" font-size="58" font-weight="900">
+    para Marketing Analytics
+  </text>
+
+  <text x="110" y="345" fill="#94A3B8" font-family="Inter, Arial, sans-serif" font-size="24" font-weight="500">
+    ROAS • Lucro Real • KPIs • Performance • Insights
+  </text>
+
+  <rect x="110" y="405" width="210" height="86" rx="18" fill="#020617" opacity="0.78"/>
+  <rect x="110.5" y="405.5" width="209" height="85" rx="17.5" stroke="#2DD4BF" stroke-opacity="0.25"/>
+  <text x="132" y="440" fill="#94A3B8" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="700">
+    ROAS Médio
+  </text>
+  <text x="132" y="475" fill="#FFFFFF" font-family="Inter, Arial, sans-serif" font-size="32" font-weight="900">
+    3.82x
+  </text>
+
+  <rect x="345" y="405" width="230" height="86" rx="18" fill="#020617" opacity="0.78"/>
+  <rect x="345.5" y="405.5" width="229" height="85" rx="17.5" stroke="#2DD4BF" stroke-opacity="0.25"/>
+  <text x="367" y="440" fill="#94A3B8" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="700">
+    Lucro Real
+  </text>
+  <text x="367" y="475" fill="#FFFFFF" font-family="Inter, Arial, sans-serif" font-size="32" font-weight="900">
+    R$ 85.300
+  </text>
+
+  <rect x="600" y="405" width="230" height="86" rx="18" fill="#020617" opacity="0.78"/>
+  <rect x="600.5" y="405.5" width="229" height="85" rx="17.5" stroke="#2DD4BF" stroke-opacity="0.25"/>
+  <text x="622" y="440" fill="#94A3B8" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="700">
+    Campanhas
+  </text>
+  <text x="622" y="475" fill="#FFFFFF" font-family="Inter, Arial, sans-serif" font-size="32" font-weight="900">
+    6 ativas
+  </text>
+
+  <rect x="875" y="155" width="190" height="300" rx="22" fill="#020617" opacity="0.72"/>
+  <rect x="875.5" y="155.5" width="189" height="299" rx="21.5" stroke="#38BDF8" stroke-opacity="0.24"/>
+
+  <rect x="910" y="340" width="24" height="75" rx="8" fill="#14B8A6"/>
+  <rect x="950" y="280" width="24" height="135" rx="8" fill="#2563EB"/>
+  <rect x="990" y="220" width="24" height="195" rx="8" fill="#38BDF8"/>
+  <rect x="1030" y="300" width="24" height="115" rx="8" fill="#F59E0B"/>
+
+  <path d="M910 250L955 210L1000 235L1045 180" stroke="#2DD4BF" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="910" cy="250" r="8" fill="#2DD4BF"/>
+  <circle cx="955" cy="210" r="8" fill="#2DD4BF"/>
+  <circle cx="1000" cy="235" r="8" fill="#2DD4BF"/>
+  <circle cx="1045" cy="180" r="8" fill="#2DD4BF"/>
+
+  <text x="110" y="535" fill="#64748B" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="600">
+    Desenvolvido por Gabriel Trisi
+  </text>
+</svg>
